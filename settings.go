@@ -24,6 +24,10 @@ type settings struct {
 	// them: "-calt" turns most coding fonts' ligatures off, "ss01" on.
 	FontFeatures []string `json:"fontFeatures,omitempty"`
 	HideSidebar  bool     `json:"hideSidebar,omitempty"`
+	// LineHeight is the height of the terminals' rows, as a multiple of
+	// the font's: 1.2 makes them 20% taller, as Ghostty's
+	// adjust-cell-height = 20%.
+	LineHeight float32 `json:"lineHeight,omitempty"`
 }
 
 const defaultFontSize = 11.6
@@ -44,6 +48,9 @@ func loadSettings() {
 		termFont.Family = f + ", " + termFont.Family
 	}
 	termFont.Features = prefs.FontFeatures
+	if prefs.LineHeight >= 0.8 && prefs.LineHeight <= 2 {
+		termFont.LineHeight = prefs.LineHeight
+	}
 	applyAppearance()
 }
 

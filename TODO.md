@@ -5,3 +5,6 @@
   OSC 7501: match their permission and input prompts, with a debounce.
   Fragile, as the agents change their screens; left until OSC 7501 and
   the badges work.
+- Việc hay phải xin quyền đọc lần nữa
+- Theme
+- Nút toggle show hide sidebar

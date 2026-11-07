@@ -41,7 +41,8 @@ terminal plugin (Ghostty's libghostty-vt). No webview, no cgo: one ~15 MB app.
 - Light and dark appearances (View ▸ Appearance), text size (⌘+ ⌘− ⌘0),
   JetBrains Mono embedded. `settings.json` takes a `fontFamily` the
   terminals try first, and `fontFeatures` as Ghostty's font-feature
-  (`["-calt"]` turns JetBrains Mono's ligatures off), read at start.
+  (`["-calt"]` turns JetBrains Mono's ligatures off), and a `lineHeight`,
+from 0.8 to 2 times the font's (1.2: rows 20% taller), read at start.
 
 ## Shortcuts
 
