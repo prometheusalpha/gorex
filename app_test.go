@@ -516,3 +516,21 @@ func TestAgentStatus(t *testing.T) {
 		t.Errorf("printing: status %d", got)
 	}
 }
+
+// TestMacTextKeys moves in the shell's line by words and to its end, as
+// Ghostty's keybinds of Option and Command do.
+func TestMacTextKeys(t *testing.T) {
+	if runtime.GOOS != "darwin" {
+		t.Skip("macOS's keys")
+	}
+	a, tt := newTestApp(t)
+	p := a.tab().Focus
+	waitFor(t, tt, "the shell", func() bool { return p.term != nil && strings.Contains(p.term.Text(), testShell.prompt) })
+	tt.Type("echo one two")
+	tt.Key(ui.Alt, ui.KeyLeft)
+	tt.Type("X")
+	tt.Key(ui.Super, ui.KeyRight)
+	tt.Type("Y")
+	tt.Key(0, ui.KeyEnter)
+	waitFor(t, tt, "the line edited", func() bool { return strings.Contains(p.term.Text(), "\none XtwoY") })
+}

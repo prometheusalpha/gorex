@@ -348,15 +348,39 @@ func (a *App) openPalette() {
 	a.focusReq = nil // the palette takes the focus
 }
 
+// macTextKeys are Ghostty's keybinds on macOS that type in the terminal
+// what Terminal does for them, in words and lines: shells bind none of
+// the sequences the keys encode to, as Option-Left's Esc [1;3D.
+var macTextKeys = []struct {
+	shortcut
+	text string
+}{
+	{shortcut{ui.Alt, ui.KeyLeft}, "\x1bb"},
+	{shortcut{ui.Alt, ui.KeyRight}, "\x1bf"},
+	{shortcut{ui.Super, ui.KeyLeft}, "\x01"},
+	{shortcut{ui.Super, ui.KeyRight}, "\x05"},
+	{shortcut{ui.Super, ui.KeyBackspace}, "\x15"},
+}
+
 // shortcuts handles the keys the menus do not: Control-Tab between tabs,
-// and on Windows, where windows of native UI run no menu shortcuts, those
-// of the commands. The window's shortcuts come before the terminal's keys.
+// on macOS macTextKeys, and on Windows, where windows of native UI run no
+// menu shortcuts, those of the commands. The window's shortcuts come
+// before the terminal's keys.
 func (a *App) shortcuts(c *ui.Context) {
 	if c.Shortcut(ui.Ctrl, ui.KeyTab) {
 		a.cycleTab(1)
 	}
 	if c.Shortcut(ui.Ctrl|ui.Shift, ui.KeyTab) {
 		a.cycleTab(-1)
+	}
+	if runtime.GOOS == "darwin" && !a.paletteOpen && a.renaming == nil && a.renamingWS == nil {
+		for _, k := range macTextKeys {
+			if c.Shortcut(k.Mods, k.Key) {
+				if t := a.tab(); t != nil && t.Focus != nil && t.Focus.term != nil {
+					t.Focus.term.Send([]byte(k.text))
+				}
+			}
+		}
 	}
 	if runtime.GOOS != "windows" {
 		return

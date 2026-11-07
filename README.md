@@ -68,6 +68,7 @@ or those Ghostty ships. Reload Settings (⇧⌘,) applies it again.
 | ⌘+ ⌘− ⌘0 | Ctrl+= Ctrl+- Ctrl+0 | Text size |
 | ⇧⌘, | Ctrl+Shift+, | Reload settings.json |
 | ⌥⌘Q | | Quit and end all sessions |
+| ⌥← ⌥→, ⌘← ⌘→, ⌘⌫ | | In the shell's line: a word back or on, its start or end, erase to its start, as Ghostty |
 
 Elsewhere than on macOS, Control and a letter are the terminal's (Ctrl+C,
 Ctrl+D, Ctrl+W…), so GoRex's shortcuts take Shift too, as copying and
