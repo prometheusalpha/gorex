@@ -45,7 +45,7 @@ terminal plugin (Ghostty's libghostty-vt). No webview, no cgo: one ~15 MB app.
 from 0.8 to 2 times the font's (1.2: rows 20% taller), and a `theme` of
 Ghostty's, by name as its theme setting takes it (`"Ayu Mirage"`, or
 `"light:Rose Pine Dawn,dark:Rose Pine"`), from `~/.config/ghostty/themes`
-or those Ghostty ships; read at start.
+or those Ghostty ships. Reload Settings (⇧⌘,) applies it again.
 
 ## Shortcuts
 
@@ -66,6 +66,7 @@ or those Ghostty ships; read at start.
 | ⇧⌘P, ⌘P | Ctrl+Shift+P | Command palette |
 | ⌘K | Ctrl+Shift+K | Clear |
 | ⌘+ ⌘− ⌘0 | Ctrl+= Ctrl+- Ctrl+0 | Text size |
+| ⇧⌘, | Ctrl+Shift+, | Reload settings.json |
 | ⌥⌘Q | | Quit and end all sessions |
 
 Elsewhere than on macOS, Control and a letter are the terminal's (Ctrl+C,

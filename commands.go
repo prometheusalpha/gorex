@@ -56,6 +56,7 @@ var (
 	cmdLight       = command{Title: "Appearance: Light", Run: func(a *App) { a.setAppearance("light") }}
 	cmdDark        = command{Title: "Appearance: Dark", Run: func(a *App) { a.setAppearance("dark") }}
 	cmdSystem      = command{Title: "Appearance: System", Run: func(a *App) { a.setAppearance("") }}
+	cmdReload      = command{Title: "Reload Settings", Accel: "CmdOrCtrl+Shift+,", Keys: "⇧⌘,", Other: ctrlShift(ui.KeyComma), Run: func(a *App) { a.reloadSettings() }}
 	cmdEndAll      = command{Title: "Quit and End All Sessions", Accel: "CmdOrCtrl+Alt+Q", Keys: "⌥⌘Q", Run: func(a *App) { a.quitAndEnd() }}
 
 	cmdNewWorkspace    = command{Title: "New Workspace", Accel: "CmdOrCtrl+Ctrl+N", Keys: "⌃⌘N", Other: ctrlShift(ui.KeyN), Run: func(a *App) { a.newWorkspace(a.currentDir()) }}
@@ -72,7 +73,7 @@ var paletteCommands = []*command{
 	&cmdNewWorkspace, &cmdRenameWorkspace, &cmdCloseWorkspace, &cmdNextWorkspace, &cmdPrevWorkspace,
 	&cmdFocusLeft, &cmdFocusRight, &cmdFocusUp, &cmdFocusDown,
 	&cmdGrowLeft, &cmdGrowRight, &cmdGrowUp, &cmdGrowDown,
-	&cmdSidebar, &cmdBigger, &cmdSmaller, &cmdActualSize, &cmdLight, &cmdDark, &cmdSystem,
+	&cmdSidebar, &cmdBigger, &cmdSmaller, &cmdActualSize, &cmdLight, &cmdDark, &cmdSystem, &cmdReload,
 	&cmdClearScroll, &cmdRestart, &cmdEndAll,
 }
 
@@ -125,7 +126,7 @@ func (s shortcut) String() string {
 		key = map[ui.Key]string{
 			ui.KeyEnter: "Enter", ui.KeyPageUp: "PageUp", ui.KeyPageDown: "PageDown",
 			ui.KeyLeft: "Left", ui.KeyRight: "Right", ui.KeyUp: "Up", ui.KeyDown: "Down",
-			ui.KeyEqual: "=", ui.KeyMinus: "-",
+			ui.KeyEqual: "=", ui.KeyMinus: "-", ui.KeyComma: ",",
 		}[k]
 	}
 	return strings.Join(append(parts, key), "+")
@@ -169,7 +170,7 @@ func (a *App) menu() *mygo.Menu {
 		})
 	}
 	appearance := func(label, v string) *mygo.MenuItem {
-		return &mygo.MenuItem{Label: label, Type: mygo.MenuItemRadio, Checked: prefs.Appearance == v, Click: func(*mygo.MenuItem, *mygo.Window) {
+		return &mygo.MenuItem{ID: "appearance:" + v, Label: label, Type: mygo.MenuItemRadio, Checked: prefs.Appearance == v, Click: func(*mygo.MenuItem, *mygo.Window) {
 			a.setAppearance(v)
 		}}
 	}
@@ -218,6 +219,7 @@ func (a *App) menu() *mygo.Menu {
 				appearance("Light", "light"),
 				appearance("Dark", "dark"),
 			}},
+			item(&cmdReload),
 			mygo.Separator(),
 			{Role: mygo.RoleToggleFullScreen},
 			{Role: mygo.RoleToggleDevTools, Label: "Inspector", Hidden: !mygo.IsDev()},
