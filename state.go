@@ -909,6 +909,21 @@ func (a *App) apply(byID map[string]rex.SessionInfo) {
 					n.Show()
 				}
 			}
+			// An agent that starts to wait for the user out of sight asks
+			// for attention, and says so even while the window has the
+			// focus, as it may wait in another workspace.
+			if blocked(in) && !blocked(was) && !(t == a.tab() && t.Focus == p && a.focusedWin) {
+				p.attention = true
+				title := programOf(in.Program).Name + " needs you"
+				if st := in.Agent; st.Kind == "question" {
+					title = programOf(in.Program).Name + " has a question"
+				}
+				body := in.Agent.Msg
+				if w := a.workspaceOf(t); w != nil && body == "" {
+					body = "in " + w.label()
+				}
+				mygo.NewNotification(mygo.NotificationOptions{Title: title, Body: body}).Show()
+			}
 			if was.Dir != in.Dir {
 				a.changed()
 			}
@@ -918,6 +933,8 @@ func (a *App) apply(byID map[string]rex.SessionInfo) {
 		a.save()
 	}
 }
+
+func blocked(in rex.SessionInfo) bool { return in.Agent != nil && in.Agent.State == "blocked" }
 
 // laterService queues a menu action without keeping a build context.
 func (a *App) laterService(fn func()) { a.post(fn); a.services.Invalidate() }

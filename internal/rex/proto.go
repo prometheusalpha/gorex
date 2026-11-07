@@ -71,6 +71,8 @@ type SessionInfo struct {
 	Attached   int       `json:"attached"`
 	Cols       int       `json:"cols"`
 	Rows       int       `json:"rows"`
+	// Agent is what a coding agent running in the session said it does.
+	Agent *AgentStatus `json:"agent,omitempty"`
 }
 
 // Hello is the server's answer to "hello".

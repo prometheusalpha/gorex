@@ -460,6 +460,16 @@ func TestAgents(t *testing.T) {
 		t.Errorf("clicking the agent shows workspace %d, tab %v", a.cur.ID, a.tab())
 	}
 
+	// What an agent says it does comes before what its pane does, and an
+	// agent GoRex does not know by name is one when it says so.
+	claude.info.Agent = &rex.AgentStatus{State: "blocked", Kind: "permission", Msg: "Bash: make"}
+	shell.info = rex.SessionInfo{Shell: "zsh", Program: "cli", Agent: &rex.AgentStatus{State: "working"}}
+	tt.Frame()
+	if texts := strings.Join(tt.Texts(), "|"); !strings.Contains(texts, "Needs approval") || !strings.Contains(texts, "cli") {
+		t.Fatalf("the sidebar shows %q", texts)
+	}
+	shell.info = rex.SessionInfo{Shell: "zsh", Program: "zsh", Idle: true}
+
 	// Without agents, the list says so.
 	claude.info = rex.SessionInfo{Shell: "zsh", Program: "zsh", Idle: true}
 	tt.Frame()

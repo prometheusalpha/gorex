@@ -42,6 +42,10 @@ type session struct {
 	code       int
 	cols, rows int
 	done       chan struct{}
+	// agent is what the session's agent last said it does, and status
+	// finds it in the output, which only read reads.
+	agent  *AgentStatus
+	status statusScanner
 }
 
 // attached is a connection attached to a session, whose output a
@@ -175,7 +179,23 @@ func (s *session) read() {
 		n, err := s.p.read(buf)
 		if n > 0 {
 			data := append([]byte(nil), buf[:n]...)
+			// Agents ask whether the terminal takes OSC 7501 with a DA1
+			// after it, and take the DA1's answer coming first for a no:
+			// the server answers before the windows see the question.
+			var statuses []string
+			s.status.scan(data, func(payload string) {
+				if strings.HasPrefix(payload, "?") {
+					s.p.write(statusReply)
+				} else {
+					statuses = append(statuses, payload)
+				}
+			})
 			s.mu.Lock()
+			for _, payload := range statuses {
+				if st, ok := parseStatus(payload, time.Now()); ok {
+					s.agent = st
+				}
+			}
 			s.vt.Feed(data)
 			s.output += uint64(n)
 			s.lastOutput = time.Now()
@@ -327,6 +347,7 @@ func (s *session) info() SessionInfo {
 		Title: s.vt.Title(), LastOutput: s.lastOutput, LastInput: s.lastInput,
 		Output: s.output, Bells: int(s.bells.Load()), Exited: s.exited, ExitCode: s.code,
 		Attached: len(s.clients), Cols: s.cols, Rows: s.rows,
+		Agent: s.agent,
 	}
 	s.mu.Unlock()
 	in.PID = s.p.pid()
@@ -338,6 +359,13 @@ func (s *session) info() SessionInfo {
 		fg = in.PID
 	}
 	in.Idle = fg == in.PID
+	// An agent killed before it cleared its state left it: its shell is
+	// back.
+	if in.Idle && in.Agent != nil {
+		s.mu.Lock()
+		s.agent, in.Agent = nil, nil
+		s.mu.Unlock()
+	}
 	p := inspect(fg)
 	in.Program, in.Args, in.Dir = p.programName(), p.args, p.dir
 	if in.Program == "" {
