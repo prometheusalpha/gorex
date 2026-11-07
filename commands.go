@@ -58,7 +58,7 @@ var (
 	cmdSystem      = command{Title: "Appearance: System", Run: func(a *App) { a.setAppearance("") }}
 	cmdEndAll      = command{Title: "Quit and End All Sessions", Accel: "CmdOrCtrl+Alt+Q", Keys: "⌥⌘Q", Run: func(a *App) { a.quitAndEnd() }}
 
-	cmdNewWorkspace    = command{Title: "New Workspace…", Accel: "CmdOrCtrl+Ctrl+N", Keys: "⌃⌘N", Other: ctrlShift(ui.KeyN), Run: func(a *App) { a.pickWorkspace() }}
+	cmdNewWorkspace    = command{Title: "New Workspace", Accel: "CmdOrCtrl+Ctrl+N", Keys: "⌃⌘N", Other: ctrlShift(ui.KeyN), Run: func(a *App) { a.newWorkspace(a.currentDir()) }}
 	cmdRenameWorkspace = command{Title: "Rename Workspace…", Run: func(a *App) { a.startRenameWorkspace(a.ws()) }}
 	cmdCloseWorkspace  = command{Title: "Close Workspace", Run: func(a *App) { a.closeWorkspace(a.ws()) }}
 	cmdNextWorkspace   = command{Title: "Next Workspace", Accel: "CmdOrCtrl+Ctrl+]", Keys: "⌃⌘]", Run: func(a *App) { a.cycleWorkspace(1) }}

@@ -355,6 +355,16 @@ func TestWorkspaces(t *testing.T) {
 	p := a.tab().Focus
 	waitFor(t, tt, "the shell", func() bool { return p.term != nil && strings.Contains(p.term.Text(), testShell.prompt) })
 
+	// New Workspace opens in the directory of the one that shows.
+	cmdNewWorkspace.Run(a)
+	if nw := a.cur; nw == w || !samePath(nw.Dir, testShell.dir) {
+		t.Errorf("New Workspace opened in %q", nw.Dir)
+	}
+	a.closeWorkspace(a.cur)
+	if a.cur != w {
+		t.Fatal("closing a workspace does not show the one before it")
+	}
+
 	// A shell that exits in a workspace out of sight closes its tab there,
 	// and the workspace with it, leaving the one that shows.
 	a.selectWorkspace(0)

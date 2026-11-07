@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
 )
 
@@ -69,7 +68,8 @@ func (a *App) workspaceOf(t *Tab) *Workspace {
 }
 
 // newWorkspace opens a workspace of dir, with a shell there, after the one
-// that shows.
+// that shows. New Workspace takes the directory of the one that shows,
+// rather than asking for one.
 func (a *App) newWorkspace(dir string) *Workspace {
 	w := &Workspace{ID: a.id(), Dir: dir}
 	at := slices.Index(a.workspaces, a.cur) + 1
@@ -78,21 +78,6 @@ func (a *App) newWorkspace(dir string) *Workspace {
 	a.renaming = nil
 	a.newTab(dir)
 	return w
-}
-
-// pickWorkspace asks for a directory, and opens a workspace of it.
-func (a *App) pickWorkspace() {
-	parent, from := a.win, a.currentDir()
-	go func() {
-		paths, err := mygo.Dialog.Open(mygo.OpenDialogOptions{
-			Parent: parent, Title: "New Workspace", ButtonLabel: "Open",
-			DefaultPath: from, Directory: true, CreateDirectories: true,
-		})
-		if err != nil || len(paths) == 0 {
-			return
-		}
-		a.do(func() { a.newWorkspace(paths[0]) })
-	}()
 }
 
 func (a *App) selectWorkspace(i int) {
@@ -269,8 +254,8 @@ func (a *App) workspaceMenu(m *ui.Menu, w *Workspace) {
 		a.changed()
 	}
 	m.Separator()
-	if m.Item("New Workspace…").Chosen() {
-		a.pickWorkspace()
+	if m.Item("New Workspace").Chosen() {
+		a.newWorkspace(w.dir())
 	}
 	if m.Item("Close Workspace").Disabled(len(a.workspaces) < 2).Chosen() {
 		a.laterService(func() { a.closeWorkspace(w) })

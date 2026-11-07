@@ -275,16 +275,19 @@ func (a *App) newTab(dir string) *Tab {
 	return t
 }
 
-// currentDir returns the directory new panes open in: the focused pane's,
-// else the workspace's.
-func (a *App) currentDir() string {
-	if t := a.tab(); t != nil && t.Focus != nil {
+// currentDir returns the directory new panes open in.
+func (a *App) currentDir() string { return a.ws().dir() }
+
+// dir returns the directory of a workspace's focused pane, else the
+// workspace's own.
+func (w *Workspace) dir() string {
+	if t := w.tab(); t != nil && t.Focus != nil {
 		if d := t.Focus.info.Dir; d != "" {
 			return d
 		}
 	}
-	if d := a.ws().Dir; d != "" {
-		return d
+	if w.Dir != "" {
+		return w.Dir
 	}
 	home, _ := os.UserHomeDir()
 	return home
