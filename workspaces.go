@@ -14,7 +14,7 @@ import (
 // them, and the window shows the tabs of one.
 type Workspace struct {
 	ID   int
-	Name string // the name the user gave it, "" to follow Dir
+	Name string // the name the user gave it, "" to follow its focused pane
 	// Dir is where its new panes open when no pane has the focus.
 	Dir    string
 	Tabs   []*Tab
@@ -30,11 +30,16 @@ func (w *Workspace) tab() *Tab {
 	return nil
 }
 
+// label names a workspace by the folder its focused pane is in, as that
+// pane cds, rather than the one it opened in.
 func (w *Workspace) label() string {
-	switch {
-	case w.Name != "":
+	if w.Name != "" {
 		return w.Name
-	case w.Dir != "":
+	}
+	if t := w.tab(); t != nil && t.Focus != nil && t.Focus.info.Dir != "" {
+		return filepath.Base(t.Focus.info.Dir)
+	}
+	if w.Dir != "" {
 		return filepath.Base(w.Dir)
 	}
 	return "Default"
@@ -212,7 +217,7 @@ func (a *App) workspaceItem(c *ui.Context, k *colors, i int, w *Workspace) {
 				}
 				ui.Text(c, w.label()).FontSize(13).FontWeight(600).TextColor(col).SingleLine().Ellipsis("…")
 			}
-			if g := a.gitOf(w.Dir); g.Branch != "" {
+			if g := a.gitOf(w.dir()); g.Branch != "" {
 				gitLine(c, k, g)
 			}
 		})

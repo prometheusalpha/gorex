@@ -428,11 +428,11 @@ func (a *App) paletteItems() []paletteItem {
 		}
 	}
 	for wi, w := range a.workspaces {
-		if len(a.workspaces) < 2 || !match(w.label()+" "+w.Dir+" workspace") {
+		if len(a.workspaces) < 2 || !match(w.label()+" "+w.dir()+" workspace") {
 			continue
 		}
 		items = append(items, paletteItem{
-			title: w.label(), detail: shortDir(w.Dir), glyph: "folder-open", keys: "Workspace",
+			title: w.label(), detail: shortDir(w.dir()), glyph: "folder-open", keys: "Workspace",
 			run: func() { a.selectWorkspace(wi) },
 		})
 	}

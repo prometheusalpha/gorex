@@ -349,7 +349,7 @@ func TestWorkspaces(t *testing.T) {
 		t.Errorf("new panes open in %q", d)
 	}
 	tt.Frame()
-	if texts := strings.Join(tt.Texts(), "|"); !strings.Contains(texts, "Default") || !strings.Contains(texts, w.label()) {
+	if texts := strings.Join(tt.Texts(), "|"); !strings.Contains(texts, first.label()) || !strings.Contains(texts, w.label()) {
 		t.Errorf("the sidebar shows %q", texts)
 	}
 	// The title bar's button hides the sidebar, and shows it again.
@@ -431,7 +431,7 @@ func TestRestoreOldLayout(t *testing.T) {
 	if !b.restore() {
 		t.Fatal("nothing restored")
 	}
-	if len(b.workspaces) != 1 || b.ws().label() != "Default" || len(b.ws().Tabs) != 1 || b.tab().Name != "old" {
+	if len(b.workspaces) != 1 || b.ws().label() != filepath.Base(os.TempDir()) || len(b.ws().Tabs) != 1 || b.tab().Name != "old" {
 		t.Fatalf("restored %d workspaces of %d tabs", len(b.workspaces), len(b.ws().Tabs))
 	}
 	if q := b.tab().Focus; q.SID != p.SID || q.restored {
