@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 
 	"github.com/egoist/mygo"
@@ -64,16 +66,23 @@ func loadSettings() {
 
 func readSettings() (settings, error) {
 	var s settings
-	b, err := os.ReadFile(settingsPath())
-	if errors.Is(err, fs.ErrNotExist) {
-		return s, nil
-	} else if err != nil {
+	b, err := settingsFile()
+	if err != nil {
 		return s, err
 	}
 	if err := json.Unmarshal(b, &s); err != nil {
 		return settings{}, fmt.Errorf("%s: %w", settingsPath(), err)
 	}
 	return s, nil
+}
+
+// settingsFile reads settings.json, as {} when it is missing or blank.
+func settingsFile() ([]byte, error) {
+	b, err := os.ReadFile(settingsPath())
+	if errors.Is(err, fs.ErrNotExist) || err == nil && len(bytes.TrimSpace(b)) == 0 {
+		return []byte("{}"), nil
+	}
+	return b, err
 }
 
 // applySettings makes s the settings but for the appearance, keeping the
@@ -133,16 +142,31 @@ func (a *App) eachTerm(fn func(*terminal.Terminal)) {
 	}
 }
 
-// saveSettings writes the settings, but not over a file that is not JSON:
-// the settings are the defaults then, and the file the user's, mid-edit.
-func saveSettings() {
-	if _, err := readSettings(); err != nil {
-		log.Printf("settings: not saved: %v", err)
+// saveSetting writes one setting into settings.json, the zero value as
+// none, keeping the others as the file has them: edits there that Reload
+// Settings has not applied yet stay. It writes nothing over a file that
+// is not JSON, the user's mid-edit.
+func saveSetting(key string, v any) {
+	b, err := settingsFile()
+	var m map[string]json.RawMessage
+	if err == nil {
+		err = json.Unmarshal(b, &m)
+	}
+	if err != nil {
+		log.Printf("settings: %s not saved: %v", key, err)
 		return
 	}
-	b, _ := json.MarshalIndent(prefs, "", "  ")
+	if m == nil {
+		m = map[string]json.RawMessage{} // the file is null
+	}
+	if reflect.ValueOf(v).IsZero() {
+		delete(m, key)
+	} else {
+		m[key], _ = json.Marshal(v)
+	}
+	b, _ = json.MarshalIndent(m, "", "  ")
 	os.MkdirAll(rex.Dir(), 0o700)
-	os.WriteFile(settingsPath(), b, 0o600)
+	os.WriteFile(settingsPath(), append(b, '\n'), 0o600)
 }
 
 func applyAppearance() {
@@ -165,13 +189,13 @@ func applyAppearance() {
 
 func (a *App) toggleSidebar() {
 	prefs.HideSidebar = !prefs.HideSidebar
-	saveSettings()
+	saveSetting("hideSidebar", prefs.HideSidebar)
 }
 
 func (a *App) setAppearance(v string) {
 	prefs.Appearance = v
 	applyAppearance()
-	saveSettings()
+	saveSetting("appearance", v)
 }
 
 // setFontSize changes the size of the terminals' text, in every pane.
@@ -180,5 +204,5 @@ func (a *App) setFontSize(size float32) {
 	prefs.FontSize = size
 	termFont.Size = size
 	a.eachTerm(func(t *terminal.Terminal) { t.SetFont(termFont) })
-	saveSettings()
+	saveSetting("fontSize", size)
 }

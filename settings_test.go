@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -46,8 +47,37 @@ func TestReloadSettings(t *testing.T) {
 	if _, err := readSettings(); err == nil {
 		t.Error("a file that is not JSON read")
 	}
-	saveSettings()
+	saveSetting("fontSize", float32(15))
 	if b, _ := os.ReadFile(filepath.Join(dir, "settings.json")); string(b) != broken {
 		t.Errorf("a file that is not JSON saved over: %s", b)
+	}
+}
+
+// TestSaveSetting changes a key of settings.json and keeps the others,
+// which the app has not read.
+func TestSaveSetting(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("GOREX_DIR", dir)
+	path := filepath.Join(dir, "settings.json")
+
+	saveSetting("fontSize", float32(15))
+	if s, err := readSettings(); err != nil || s.FontSize != 15 {
+		t.Errorf("saved without a file %+v, %v", s, err)
+	}
+	os.WriteFile(path, []byte(`{"fontSize": 15, "lineHeight": 1.2, "hideSidebar": true}`), 0o600)
+	saveSetting("fontSize", float32(16))
+	saveSetting("hideSidebar", false)
+	s, err := readSettings()
+	if err != nil || s.FontSize != 16 || s.LineHeight != 1.2 || s.HideSidebar {
+		t.Errorf("saved %+v, %v", s, err)
+	}
+	if b, _ := os.ReadFile(path); strings.Contains(string(b), "hideSidebar") {
+		t.Errorf("false saved: %s", b)
+	}
+
+	os.WriteFile(path, nil, 0o600)
+	saveSetting("appearance", "dark")
+	if s, err := readSettings(); err != nil || s.Appearance != "dark" {
+		t.Errorf("saved into a blank file %+v, %v", s, err)
 	}
 }
