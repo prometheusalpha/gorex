@@ -117,7 +117,7 @@ func (a *App) open() {
 	win.OnClosed(func() {
 		a.saveNow()
 		a.quitting = true
-		for _, t := range a.tabs {
+		for _, t := range a.allTabs() {
 			for _, p := range t.panes() {
 				p.closed = true
 				if p.term != nil {
@@ -132,7 +132,7 @@ func (a *App) open() {
 
 // saveNow sends the layout to the server and waits for it to be kept.
 func (a *App) saveNow() {
-	if a.client == nil || len(a.tabs) == 0 && !a.quitting {
+	if a.client == nil || len(a.allTabs()) == 0 && !a.quitting {
 		return
 	}
 	b, err := json.Marshal(a.snapshot())
@@ -153,8 +153,8 @@ func (a *App) saveNow() {
 // reset forgets the state of a window that closed, keeping the server's
 // connection, for the next window.
 func (a *App) reset() {
-	a.tabs, a.active, a.focusReq = nil, 0, nil
-	a.paletteOpen, a.hostOpen, a.renaming = false, false, nil
+	a.workspaces, a.cur, a.focusReq = nil, nil, nil
+	a.paletteOpen, a.hostOpen, a.renaming, a.renamingWS = false, false, nil, nil
 	a.saveDue, a.quitting, a.lastSnapshot, a.title = false, false, "", ""
 }
 

@@ -56,12 +56,19 @@ var (
 	cmdDark        = command{Title: "Appearance: Dark", Run: func(a *App) { a.setAppearance("dark") }}
 	cmdSystem      = command{Title: "Appearance: System", Run: func(a *App) { a.setAppearance("") }}
 	cmdEndAll      = command{Title: "Quit and End All Sessions", Accel: "CmdOrCtrl+Alt+Q", Keys: "⌥⌘Q", Run: func(a *App) { a.quitAndEnd() }}
+
+	cmdNewWorkspace    = command{Title: "New Workspace…", Accel: "CmdOrCtrl+Ctrl+N", Keys: "⌃⌘N", Other: ctrlShift(ui.KeyN), Run: func(a *App) { a.pickWorkspace() }}
+	cmdRenameWorkspace = command{Title: "Rename Workspace…", Run: func(a *App) { a.startRenameWorkspace(a.ws()) }}
+	cmdCloseWorkspace  = command{Title: "Close Workspace", Run: func(a *App) { a.closeWorkspace(a.ws()) }}
+	cmdNextWorkspace   = command{Title: "Next Workspace", Accel: "CmdOrCtrl+Ctrl+]", Keys: "⌃⌘]", Run: func(a *App) { a.cycleWorkspace(1) }}
+	cmdPrevWorkspace   = command{Title: "Previous Workspace", Accel: "CmdOrCtrl+Ctrl+[", Keys: "⌃⌘[", Run: func(a *App) { a.cycleWorkspace(-1) }}
 )
 
 // paletteCommands are those the command palette lists, before the tabs.
 var paletteCommands = []*command{
 	&cmdNewTab, &cmdSplitRight, &cmdSplitDown, &cmdZoom, &cmdEqualize, &cmdClosePane, &cmdCloseTab,
 	&cmdNextTab, &cmdPrevTab, &cmdRenameTab,
+	&cmdNewWorkspace, &cmdRenameWorkspace, &cmdCloseWorkspace, &cmdNextWorkspace, &cmdPrevWorkspace,
 	&cmdFocusLeft, &cmdFocusRight, &cmdFocusUp, &cmdFocusDown,
 	&cmdGrowLeft, &cmdGrowRight, &cmdGrowUp, &cmdGrowDown,
 	&cmdBigger, &cmdSmaller, &cmdActualSize, &cmdLight, &cmdDark, &cmdSystem,
@@ -144,6 +151,22 @@ func (a *App) menu() *mygo.Menu {
 			},
 		})
 	}
+	wsItems := []*mygo.MenuItem{item(&cmdNewWorkspace), mygo.Separator(), item(&cmdNextWorkspace), item(&cmdPrevWorkspace), mygo.Separator()}
+	for i := 1; i <= 9; i++ {
+		// Elsewhere than on macOS, Control-Shift and a digit shows a
+		// tab, and the other modifiers make characters: the sidebar and
+		// the palette show workspaces there.
+		accel := ""
+		if runtime.GOOS == "darwin" {
+			accel = fmt.Sprintf("CmdOrCtrl+Ctrl+%d", i)
+		}
+		wsItems = append(wsItems, &mygo.MenuItem{
+			Label: fmt.Sprintf("Show Workspace %d", i), Accelerator: accel,
+			Click: func(*mygo.MenuItem, *mygo.Window) {
+				a.do(func() { a.showWorkspace(i) })
+			},
+		})
+	}
 	appearance := func(label, v string) *mygo.MenuItem {
 		return &mygo.MenuItem{Label: label, Type: mygo.MenuItemRadio, Checked: prefs.Appearance == v, Click: func(*mygo.MenuItem, *mygo.Window) {
 			a.setAppearance(v)
@@ -197,6 +220,7 @@ func (a *App) menu() *mygo.Menu {
 			{Role: mygo.RoleToggleDevTools, Label: "Inspector", Hidden: !mygo.IsDev()},
 		}},
 		{Label: "Tabs", Submenu: append(tabItems, mygo.Separator(), item(&cmdRenameTab))},
+		{Label: "Workspaces", Submenu: append(wsItems, mygo.Separator(), item(&cmdRenameWorkspace), item(&cmdCloseWorkspace))},
 		{Role: mygo.RoleWindowMenu},
 	})
 }
@@ -240,21 +264,22 @@ func (a *App) closeActiveTab() {
 // showTab shows the nth tab, from 1; 9 is the last.
 func (a *App) showTab(n int) {
 	if n == 9 {
-		a.selectTab(len(a.tabs) - 1)
+		a.selectTab(len(a.ws().Tabs) - 1)
 	} else {
 		a.selectTab(n - 1)
 	}
 }
 
 func (a *App) cycleTab(d int) {
-	if n := len(a.tabs); n > 1 {
-		a.selectTab(((a.active+d)%n + n) % n)
+	if n := len(a.ws().Tabs); n > 1 {
+		a.selectTab(((a.ws().Active+d)%n + n) % n)
 	}
 }
 
 func (a *App) startRename() {
 	if t := a.tab(); t != nil {
-		a.renaming, a.renameText, a.renameFocus = t, t.Name, false
+		a.renaming, a.renamingWS = t, nil
+		a.renameText, a.renameFocus = t.Name, false
 		a.focusReq = nil // the field takes the focus
 	}
 }
@@ -301,7 +326,7 @@ func (a *App) restartFocused() {
 
 func (a *App) quitAndEnd() {
 	a.quitting = true
-	for _, t := range a.tabs {
+	for _, t := range a.allTabs() {
 		for _, p := range t.panes() {
 			p.closed = true
 		}
@@ -355,23 +380,37 @@ func (a *App) paletteItems() []paletteItem {
 	var items []paletteItem
 	q := strings.ToLower(strings.TrimSpace(a.paletteQuery))
 	match := func(s string) bool { return q == "" || fuzzy(strings.ToLower(s), q) }
-	for ti, t := range a.tabs {
-		for _, p := range t.panes() {
-			name, detail := p.label()
-			if !match(fmt.Sprintf("%s %s tab %d", name, detail, ti+1)) {
-				continue
+	for wi, w := range a.workspaces {
+		for ti, t := range w.Tabs {
+			for _, p := range t.panes() {
+				name, detail := p.label()
+				keys := fmt.Sprintf("Tab %d", ti+1)
+				if len(a.workspaces) > 1 {
+					keys = w.label() + " · " + keys
+				}
+				if !match(name + " " + detail + " " + keys) {
+					continue
+				}
+				items = append(items, paletteItem{
+					title: name, detail: detail, glyph: paneProgram(p).Glyph, keys: keys,
+					run: func() {
+						a.selectWorkspace(wi)
+						a.selectTab(ti)
+						t.setFocus(p)
+						a.focusReq = p
+					},
+				})
 			}
-			ti, t, p := ti, t, p
-			items = append(items, paletteItem{
-				title: name, detail: detail, glyph: paneProgram(p).Glyph,
-				keys: fmt.Sprintf("Tab %d", ti+1),
-				run: func() {
-					a.selectTab(ti)
-					t.setFocus(p)
-					a.focusReq = p
-				},
-			})
 		}
+	}
+	for wi, w := range a.workspaces {
+		if len(a.workspaces) < 2 || !match(w.label()+" "+w.Dir+" workspace") {
+			continue
+		}
+		items = append(items, paletteItem{
+			title: w.label(), detail: shortDir(w.Dir), glyph: "folder-open", keys: "Workspace",
+			run: func() { a.selectWorkspace(wi) },
+		})
 	}
 	for _, cmd := range paletteCommands {
 		if cmd.Hidden || !match(cmd.Title) {

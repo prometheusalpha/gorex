@@ -73,6 +73,8 @@ func (a *App) debug(dir, line string) {
 		switch verb {
 		case "tab":
 			win.Update(func() { a.selectTab(atoi(arg) - 1) })
+		case "workspace":
+			win.Update(func() { a.newWorkspace(arg) })
 		case "focus":
 			win.Update(func() {
 				if t := a.tab(); t != nil {

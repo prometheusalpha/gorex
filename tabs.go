@@ -24,21 +24,22 @@ const (
 // with them when the title bar has no room for them all. The track is part
 // of the title bar: its edges and the gaps between tabs drag the window.
 func (a *App) tabStrip(c *ui.Context, k *colors) {
-	widths := make([]float32, len(a.tabs))
-	total := float32(4 + max(len(a.tabs)-1, 0)) // the padding and separators
-	for i, t := range a.tabs {
+	w := a.ws()
+	widths := make([]float32, len(w.Tabs))
+	total := float32(4 + max(len(w.Tabs)-1, 0)) // the padding and separators
+	for i, t := range w.Tabs {
 		widths[i] = tabWidth(c, t)
 		total += widths[i]
 	}
 	track := ui.Row(c).Basis(total).Shrink(1).MinWidth(0).Height(tabH+4).Padding(2).Radius((tabH+4)/2).
 		Background(k.track).Border(0.5, k.trackBorder).AlignItems(ui.Center).ClipX().
 		DragWindow().Role(ui.RoleTabList).Label("Tabs")
-	tabs := slices.Clone(a.tabs)
+	tabs := slices.Clone(w.Tabs)
 	track.Children(func() {
 		for i, t := range tabs {
 			if i > 0 {
 				sep := ui.Box(c).Size(1, 16).Shrink(0)
-				if i != a.active && i-1 != a.active {
+				if i != w.Active && i-1 != w.Active {
 					sep.Background(k.tabSep)
 				}
 			}
@@ -71,7 +72,7 @@ const titleFree = 56
 
 // tabItem draws a tab: the tiles of its panes' programs and its label.
 func (a *App) tabItem(c *ui.Context, k *colors, i int, t *Tab, width float32) {
-	active := i == a.active
+	active := i == a.ws().Active
 	e := ui.Row(c.Key(t.ID)).Height(tabH).Basis(width).Shrink(1).MinWidth(64).
 		Padding(0, 10, 0, 6).Gap(9).AlignItems(ui.Center).Radius(tabH / 2).Role(ui.RoleTab).Selected(active)
 	name, detail := t.label()
@@ -117,7 +118,7 @@ func (a *App) tabItem(c *ui.Context, k *colors, i int, t *Tab, width float32) {
 		label.Draw(func(p *ui.Painter, r ui.Rect) {
 			fadeText(p, r, tabLabel(name, detail, nameColor, detailColor))
 		})
-		if hovered && len(a.tabs) > 1 {
+		if hovered && len(a.allTabs()) > 1 {
 			x := iconButton(c, k, "x", "Close Tab", 18, 12).Tooltip("Close Tab")
 			if x.Clicked() {
 				a.later(c, func() { a.closeTab(t) })
@@ -174,20 +175,21 @@ func (a *App) tabBusy(c *ui.Context, t *Tab) bool {
 }
 
 func (a *App) moveTab(t *Tab, to int) {
-	from := slices.Index(a.tabs, t)
+	w := a.ws()
+	from := slices.Index(w.Tabs, t)
 	if from < 0 || to == from {
 		return
 	}
 	activeTab := a.tab()
-	a.tabs = slices.Delete(a.tabs, from, from+1)
-	a.tabs = slices.Insert(a.tabs, min(to, len(a.tabs)), t)
-	a.active = slices.Index(a.tabs, activeTab)
+	w.Tabs = slices.Delete(w.Tabs, from, from+1)
+	w.Tabs = slices.Insert(w.Tabs, min(to, len(w.Tabs)), t)
+	w.Active = slices.Index(w.Tabs, activeTab)
 	a.changed()
 }
 
 func (a *App) tabMenu(m *ui.Menu, t *Tab) {
 	if m.Item("Rename Tab…").Chosen() {
-		a.selectTab(slices.Index(a.tabs, t))
+		a.selectTab(slices.Index(a.ws().Tabs, t))
 		a.startRename()
 	}
 	if t.Name != "" && m.Item("Reset Name").Chosen() {
@@ -195,11 +197,11 @@ func (a *App) tabMenu(m *ui.Menu, t *Tab) {
 		a.changed()
 	}
 	m.Separator()
-	i := slices.Index(a.tabs, t)
+	i := slices.Index(a.ws().Tabs, t)
 	if m.Item("Move Left").Disabled(i <= 0).Chosen() {
 		a.moveTab(t, i-1)
 	}
-	if m.Item("Move Right").Disabled(i >= len(a.tabs)-1).Chosen() {
+	if m.Item("Move Right").Disabled(i >= len(a.ws().Tabs)-1).Chosen() {
 		a.moveTab(t, i+1)
 	}
 	m.Separator()
@@ -213,9 +215,9 @@ func (a *App) tabMenu(m *ui.Menu, t *Tab) {
 	if m.Item("Close Tab").Chosen() {
 		a.laterService(func() { a.closeTab(t) })
 	}
-	if m.Item("Close Other Tabs").Disabled(len(a.tabs) < 2).Chosen() {
+	if m.Item("Close Other Tabs").Disabled(len(a.ws().Tabs) < 2).Chosen() {
 		a.laterService(func() {
-			for _, o := range slices.Clone(a.tabs) {
+			for _, o := range slices.Clone(a.ws().Tabs) {
 				if o != t {
 					a.closeTab(o)
 				}

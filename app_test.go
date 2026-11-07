@@ -161,20 +161,20 @@ func TestPanesAndTabs(t *testing.T) {
 
 	// A second tab, renamed, then closed with its pane.
 	a.newTab(os.TempDir())
-	if len(a.tabs) != 2 || a.active != 1 {
-		t.Fatalf("%d tabs, active %d", len(a.tabs), a.active)
+	if len(a.ws().Tabs) != 2 || a.ws().Active != 1 {
+		t.Fatalf("%d tabs, active %d", len(a.ws().Tabs), a.ws().Active)
 	}
 	a.startRename()
 	tt.Frame()
 	tt.Type("logs")
 	tt.Key(0, ui.KeyEnter)
 	tt.Frame()
-	if a.tabs[1].Name != "logs" {
-		t.Errorf("tab named %q", a.tabs[1].Name)
+	if a.ws().Tabs[1].Name != "logs" {
+		t.Errorf("tab named %q", a.ws().Tabs[1].Name)
 	}
 	a.closeFocused()
-	if len(a.tabs) != 1 || a.active != 0 {
-		t.Fatalf("%d tabs, active %d, after closing the last pane of a tab", len(a.tabs), a.active)
+	if len(a.ws().Tabs) != 1 || a.ws().Active != 0 {
+		t.Fatalf("%d tabs, active %d, after closing the last pane of a tab", len(a.ws().Tabs), a.ws().Active)
 	}
 
 	// A shell that exits closes its pane.
@@ -189,11 +189,11 @@ func TestRestore(t *testing.T) {
 	a.split(false)
 	a.tab().Root.Ratio = 0.3
 	a.newTab(testShell.dir)
-	a.tabs[1].Name = "second"
+	a.ws().Tabs[1].Name = "second"
 	tt.Frame()
 	a.saveNow()
 	sids := map[string]bool{}
-	for _, tab := range a.tabs {
+	for _, tab := range a.ws().Tabs {
 		for _, p := range tab.panes() {
 			sids[p.SID] = true
 			p.term.Close() // detach, as when the app quits
@@ -204,13 +204,13 @@ func TestRestore(t *testing.T) {
 	if !b.restore() {
 		t.Fatal("nothing restored")
 	}
-	if len(b.tabs) != 2 || b.tabs[1].Name != "second" || b.active != 1 {
-		t.Fatalf("restored %d tabs, active %d", len(b.tabs), b.active)
+	if len(b.ws().Tabs) != 2 || b.ws().Tabs[1].Name != "second" || b.ws().Active != 1 {
+		t.Fatalf("restored %d tabs, active %d", len(b.ws().Tabs), b.ws().Active)
 	}
-	if r := b.tabs[0].Root; r.Pane != nil || r.Ratio != 0.3 {
+	if r := b.ws().Tabs[0].Root; r.Pane != nil || r.Ratio != 0.3 {
 		t.Errorf("first tab's root %+v", r)
 	}
-	for _, tab := range b.tabs {
+	for _, tab := range b.ws().Tabs {
 		for _, p := range tab.panes() {
 			if !sids[p.SID] || p.restored {
 				t.Errorf("pane of session %q not attached again", p.SID)
@@ -255,7 +255,7 @@ func TestLabels(t *testing.T) {
 // must not hide it.
 func TestCloseButtons(t *testing.T) {
 	a, tt := newTestApp(t)
-	first := a.tabs[0]
+	first := a.ws().Tabs[0]
 	a.newTab(os.TempDir())
 	tt.Frame()
 	track, ok := tt.Find("Tabs")
@@ -273,8 +273,8 @@ func TestCloseButtons(t *testing.T) {
 	tt.Frame()
 	tt.Release(x.X+x.W/2, x.Y+x.H/2)
 	tt.Frame()
-	if len(a.tabs) != 1 || slices.Contains(a.tabs, first) {
-		t.Fatalf("%d tabs after clicking the first one's close button", len(a.tabs))
+	if len(a.ws().Tabs) != 1 || slices.Contains(a.ws().Tabs, first) {
+		t.Fatalf("%d tabs after clicking the first one's close button", len(a.ws().Tabs))
 	}
 
 	// A pane without the focus shows its buttons under the pointer.
@@ -313,7 +313,7 @@ func TestPaletteScrolls(t *testing.T) {
 			tab.Root = &Node{A: tab.Root, B: n, Ratio: 0.5}
 		}
 	}
-	a.tabs = []*Tab{tab}
+	a.ws().Tabs = []*Tab{tab}
 	tt := ui.NewTester(func(c *ui.Context) { a.palette(c, colorsOf(c)) }, 1000, 620)
 	a.openPalette()
 	tt.Frame()
@@ -333,5 +333,82 @@ func TestPaletteScrolls(t *testing.T) {
 	tt.Frame()
 	if r, _ := tt.Find("shell01"); r.H == 0 {
 		t.Error("the keys chose a row out of sight")
+	}
+}
+
+func TestWorkspaces(t *testing.T) {
+	a, tt := newTestApp(t)
+	first, firstTab := a.ws(), a.tab()
+	w := a.newWorkspace(testShell.dir)
+	if len(a.workspaces) != 2 || a.cur != w || len(w.Tabs) != 1 {
+		t.Fatalf("%d workspaces after New Workspace", len(a.workspaces))
+	}
+	// Before the server says where its pane is, the workspace's directory
+	// is where new panes open.
+	if d := a.currentDir(); !samePath(d, testShell.dir) {
+		t.Errorf("new panes open in %q", d)
+	}
+	tt.Frame()
+	if texts := strings.Join(tt.Texts(), "|"); !strings.Contains(texts, "Default") || !strings.Contains(texts, w.label()) {
+		t.Errorf("the sidebar shows %q", texts)
+	}
+	p := a.tab().Focus
+	waitFor(t, tt, "the shell", func() bool { return p.term != nil && strings.Contains(p.term.Text(), testShell.prompt) })
+
+	// A shell that exits in a workspace out of sight closes its tab there,
+	// and the workspace with it, leaving the one that shows.
+	a.selectWorkspace(0)
+	if a.tab() != firstTab {
+		t.Fatal("the first workspace does not show its tab")
+	}
+	p.term.Send([]byte("exit\r"))
+	waitFor(t, tt, "the workspace to close", func() bool { return len(a.workspaces) == 1 })
+	if a.cur != first || a.tab() != firstTab {
+		t.Error("another workspace shows")
+	}
+
+	// Workspaces come back as they were.
+	w = a.newWorkspace(testShell.dir)
+	w.Name = "bins"
+	a.split(false)
+	tt.Frame()
+	a.saveNow()
+	for _, tab := range a.allTabs() {
+		for _, p := range tab.panes() {
+			p.term.Close()
+		}
+	}
+	b := &App{client: a.client}
+	if !b.restore() {
+		t.Fatal("nothing restored")
+	}
+	if len(b.workspaces) != 2 || b.cur != b.workspaces[1] {
+		t.Fatalf("restored %d workspaces, showing %v", len(b.workspaces), b.cur)
+	}
+	if bw := b.cur; bw.Name != "bins" || !samePath(bw.Dir, testShell.dir) || len(bw.tab().panes()) != 2 {
+		t.Errorf("restored workspace %+v", bw)
+	}
+}
+
+// TestRestoreOldLayout restores a layout saved before workspaces: its
+// tabs make one workspace.
+func TestRestoreOldLayout(t *testing.T) {
+	a, tt := newTestApp(t)
+	tt.Frame()
+	p := a.tab().Focus
+	old := fmt.Sprintf(`{"active":0,"tabs":[{"name":"old","root":{"sid":%q,"dir":%q},"focus":0}]}`, p.SID, os.TempDir())
+	if err := a.client.SetLayout([]byte(old)); err != nil {
+		t.Fatal(err)
+	}
+	p.term.Close()
+	b := &App{client: a.client}
+	if !b.restore() {
+		t.Fatal("nothing restored")
+	}
+	if len(b.workspaces) != 1 || b.ws().label() != "Default" || len(b.ws().Tabs) != 1 || b.tab().Name != "old" {
+		t.Fatalf("restored %d workspaces of %d tabs", len(b.workspaces), len(b.ws().Tabs))
+	}
+	if q := b.tab().Focus; q.SID != p.SID || q.restored {
+		t.Error("the pane's session was not attached again")
 	}
 }

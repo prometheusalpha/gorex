@@ -25,10 +25,13 @@ func (a *App) view(c *ui.Context) {
 	c.Root().Background(k.bgBottom)
 	ui.Column(c).Fill().Draw(func(p *ui.Painter, r ui.Rect) { paintBackground(p, r, k) }).Children(func() {
 		a.titleBar(c, k)
-		ui.Column(c).Grow(1).MinHeight(0).Padding(0, gap, gap, gap).Children(func() {
-			if t := a.tab(); t != nil {
-				a.tabContent(c, k, t)
-			}
+		ui.Row(c).Grow(1).MinHeight(0).Padding(0, gap, gap, gap).Gap(gap).AlignItems(ui.Stretch).Children(func() {
+			a.sidebar(c, k)
+			ui.Column(c).Grow(1).MinWidth(0).MinHeight(0).Children(func() {
+				if t := a.tab(); t != nil {
+					a.tabContent(c, k, t)
+				}
+			})
 		})
 	})
 	if a.err != "" {

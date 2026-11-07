@@ -79,9 +79,10 @@ type App struct {
 	hello  rex.Hello
 	err    string
 
-	tabs   []*Tab
-	active int
-	nextID int
+	// workspaces hold the tabs, and cur is the one the window shows.
+	workspaces []*Workspace
+	cur        *Workspace
+	nextID     int
 
 	// focusReq asks the view to give the keyboard focus to a pane's
 	// terminal.
@@ -93,6 +94,7 @@ type App struct {
 	paletteSel   int
 	hostOpen     bool
 	renaming     *Tab
+	renamingWS   *Workspace
 	renameText   string
 	renameFocus  bool
 	saveDue      bool
@@ -139,12 +141,7 @@ func (a *App) id() int {
 	return a.nextID
 }
 
-func (a *App) tab() *Tab {
-	if a.active >= 0 && a.active < len(a.tabs) {
-		return a.tabs[a.active]
-	}
-	return nil
-}
+func (a *App) tab() *Tab { return a.ws().tab() }
 
 // panes returns the panes of a node in order, left to right and top to
 // bottom.
@@ -269,20 +266,25 @@ func (a *App) newTab(dir string) *Tab {
 	t.Root = &Node{ID: a.id(), Pane: p}
 	p.Tab, p.Node = t, t.Root
 	t.setFocus(p)
-	at := min(a.active+1, len(a.tabs))
-	a.tabs = slices.Insert(a.tabs, at, t)
-	a.active = at
+	w := a.ws()
+	at := min(w.Active+1, len(w.Tabs))
+	w.Tabs = slices.Insert(w.Tabs, at, t)
+	w.Active = at
 	a.focusReq = p
 	a.changed()
 	return t
 }
 
-// currentDir returns the directory new panes open in: the focused pane's.
+// currentDir returns the directory new panes open in: the focused pane's,
+// else the workspace's.
 func (a *App) currentDir() string {
 	if t := a.tab(); t != nil && t.Focus != nil {
 		if d := t.Focus.info.Dir; d != "" {
 			return d
 		}
+	}
+	if d := a.ws().Dir; d != "" {
+		return d
 	}
 	home, _ := os.UserHomeDir()
 	return home
@@ -368,19 +370,26 @@ func (a *App) closePane(p *Pane) {
 	a.changed()
 }
 
+// removeTab takes a tab out of its workspace, which may be another than
+// the one showing, as when a shell exits there.
 func (a *App) removeTab(t *Tab) {
-	i := slices.Index(a.tabs, t)
-	if i < 0 {
+	w := a.workspaceOf(t)
+	if w == nil {
 		return
 	}
-	a.tabs = slices.Delete(a.tabs, i, i+1)
-	if a.active > i || a.active >= len(a.tabs) {
-		a.active = max(a.active-1, 0)
+	i := slices.Index(w.Tabs, t)
+	w.Tabs = slices.Delete(w.Tabs, i, i+1)
+	if w.Active > i || w.Active >= len(w.Tabs) {
+		w.Active = max(w.Active-1, 0)
 	}
 	if a.renaming == t {
 		a.renaming = nil
 	}
-	if len(a.tabs) == 0 {
+	if len(w.Tabs) == 0 && len(a.workspaces) > 1 {
+		a.removeWorkspace(w)
+		return
+	}
+	if len(w.Tabs) == 0 {
 		a.changed()
 		a.save()
 		if a.win != nil {
@@ -388,7 +397,7 @@ func (a *App) removeTab(t *Tab) {
 		}
 		return
 	}
-	if nt := a.tab(); nt != nil {
+	if nt := a.tab(); nt != nil && w == a.cur {
 		a.focusReq = nt.Focus
 	}
 	a.changed()
@@ -409,11 +418,12 @@ func (a *App) closeTab(t *Tab) {
 }
 
 func (a *App) selectTab(i int) {
-	if i < 0 || i >= len(a.tabs) {
+	w := a.ws()
+	if i < 0 || i >= len(w.Tabs) {
 		return
 	}
-	a.active = i
-	t := a.tabs[i]
+	w.Active = i
+	t := w.Tabs[i]
 	if t.Focus != nil {
 		t.Focus.attention = false
 	}
@@ -643,9 +653,20 @@ func (t *Tab) label() (name, detail string) {
 	return t.Focus.label()
 }
 
-// The saved layout: the tabs, their splits and the sessions of their
-// panes, which the server keeps, and the app restores when it starts.
+// The saved layout: the workspaces, their tabs, their splits and the
+// sessions of their panes, which the server keeps, and the app restores
+// when it starts.
 type savedLayout struct {
+	// Active is the workspace's, or in a layout of before workspaces,
+	// which has Tabs instead, the tab's.
+	Active     int              `json:"active"`
+	Tabs       []savedTab       `json:"tabs,omitempty"`
+	Workspaces []savedWorkspace `json:"workspaces,omitempty"`
+}
+
+type savedWorkspace struct {
+	Name   string     `json:"name,omitempty"`
+	Dir    string     `json:"dir,omitempty"`
 	Active int        `json:"active"`
 	Tabs   []savedTab `json:"tabs"`
 }
@@ -669,7 +690,7 @@ type savedNode struct {
 }
 
 func (a *App) snapshot() savedLayout {
-	l := savedLayout{Active: a.active}
+	l := savedLayout{Active: max(slices.Index(a.workspaces, a.cur), 0)}
 	var save func(n *Node) *savedNode
 	save = func(n *Node) *savedNode {
 		if p := n.Pane; p != nil {
@@ -684,10 +705,14 @@ func (a *App) snapshot() savedLayout {
 		}
 		return &savedNode{Vertical: n.Vertical, Ratio: n.Ratio, A: save(n.A), B: save(n.B)}
 	}
-	for _, t := range a.tabs {
-		st := savedTab{Name: t.Name, Root: save(t.Root), Zoom: t.Zoom != nil}
-		st.Focus = max(slices.Index(t.panes(), t.Focus), 0)
-		l.Tabs = append(l.Tabs, st)
+	for _, w := range a.workspaces {
+		sw := savedWorkspace{Name: w.Name, Dir: w.Dir, Active: w.Active}
+		for _, t := range w.Tabs {
+			st := savedTab{Name: t.Name, Root: save(t.Root), Zoom: t.Zoom != nil}
+			st.Focus = max(slices.Index(t.panes(), t.Focus), 0)
+			sw.Tabs = append(sw.Tabs, st)
+		}
+		l.Workspaces = append(l.Workspaces, sw)
 	}
 	return l
 }
@@ -711,15 +736,24 @@ func (a *App) save() {
 	go c.SetLayout(b)
 }
 
-// restore opens the tabs of the saved layout, attaching to the sessions
-// the server still has and starting new ones in place of those it lost.
+// restore opens the workspaces and tabs of the saved layout, attaching to
+// the sessions the server still has and starting new ones in place of
+// those it lost.
 func (a *App) restore() bool {
 	raw, err := a.client.Layout()
 	if err != nil || len(raw) == 0 {
 		return false
 	}
 	var l savedLayout
-	if json.Unmarshal(raw, &l) != nil || len(l.Tabs) == 0 {
+	if json.Unmarshal(raw, &l) != nil {
+		return false
+	}
+	// A layout of before workspaces is one workspace of its tabs.
+	if len(l.Workspaces) == 0 && len(l.Tabs) > 0 {
+		l.Workspaces = []savedWorkspace{{Active: l.Active, Tabs: l.Tabs}}
+		l.Active = 0
+	}
+	if len(l.Workspaces) == 0 {
 		return false
 	}
 	live := map[string]rex.SessionInfo{}
@@ -756,24 +790,36 @@ func (a *App) restore() bool {
 		n.A, n.B = load(s.A, t, n), load(s.B, t, n)
 		return n
 	}
-	for _, st := range l.Tabs {
-		if st.Root == nil {
+	for i, sw := range l.Workspaces {
+		w := &Workspace{ID: a.id(), Name: sw.Name, Dir: sw.Dir}
+		for _, st := range sw.Tabs {
+			if st.Root == nil {
+				continue
+			}
+			t := &Tab{ID: a.id(), Name: st.Name}
+			t.Root = load(st.Root, t, nil)
+			ps := t.panes()
+			for _, p := range ps {
+				t.setFocus(p)
+			}
+			t.setFocus(ps[min(max(st.Focus, 0), len(ps)-1)])
+			if st.Zoom && len(ps) > 1 {
+				t.Zoom = t.Focus
+			}
+			w.Tabs = append(w.Tabs, t)
+		}
+		if len(w.Tabs) == 0 {
 			continue
 		}
-		t := &Tab{ID: a.id(), Name: st.Name}
-		t.Root = load(st.Root, t, nil)
-		ps := t.panes()
-		for _, p := range ps {
-			t.setFocus(p)
+		w.Active = min(max(sw.Active, 0), len(w.Tabs)-1)
+		a.workspaces = append(a.workspaces, w)
+		if i == l.Active || a.cur == nil {
+			a.cur = w
 		}
-		t.setFocus(ps[min(max(st.Focus, 0), len(ps)-1)])
-		if st.Zoom && len(ps) > 1 {
-			t.Zoom = t.Focus
-		}
-		a.tabs = append(a.tabs, t)
 	}
 	// Sessions no tab shows, as those of another window that crashed,
-	// get a tab of their own rather than running unseen.
+	// get a tab of their own rather than running unseen, in the workspace
+	// that shows.
 	for _, in := range sortedInfos(live) {
 		if used[in.ID] {
 			continue
@@ -784,12 +830,11 @@ func (a *App) restore() bool {
 		t.Root = &Node{ID: a.id(), Pane: p}
 		p.Tab, p.Node = t, t.Root
 		t.setFocus(p)
-		a.tabs = append(a.tabs, t)
+		a.ws().Tabs = append(a.ws().Tabs, t)
 	}
-	if len(a.tabs) == 0 {
+	if len(a.allTabs()) == 0 {
 		return false
 	}
-	a.active = min(max(l.Active, 0), len(a.tabs)-1)
 	a.focusReq = a.tab().Focus
 	return true
 }
@@ -837,7 +882,7 @@ func (a *App) poll(win *mygo.Window, client *rex.Client) {
 
 // apply takes what the server said of the sessions.
 func (a *App) apply(byID map[string]rex.SessionInfo) {
-	for ti, t := range a.tabs {
+	for _, t := range a.allTabs() {
 		for _, p := range t.panes() {
 			in, ok := byID[p.SID]
 			if !ok {
@@ -848,7 +893,7 @@ func (a *App) apply(byID map[string]rex.SessionInfo) {
 			// A program that ran a while and finished out of sight
 			// asks for attention.
 			if !was.Idle && was.Program != "" && in.Idle && was.Program != in.Program {
-				seen := ti == a.active && t.Focus == p && a.focusedWin
+				seen := t == a.tab() && t.Focus == p && a.focusedWin
 				if !seen {
 					p.attention = true
 				}

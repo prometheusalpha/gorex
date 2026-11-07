@@ -85,7 +85,7 @@ func (a *App) hostPanel(c *ui.Context, k *colors, name, glyph string) {
 	})
 	ui.Divider(c)
 	sessions, running := 0, 0
-	for _, t := range a.tabs {
+	for _, t := range a.allTabs() {
 		for _, p := range t.panes() {
 			sessions++
 			if !p.info.Idle && p.info.Program != "" {

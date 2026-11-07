@@ -74,7 +74,7 @@ func (a *App) setFontSize(size float32) {
 	size = min(max(size, 8), 32)
 	prefs.FontSize = size
 	termFont.Size = size
-	for _, t := range a.tabs {
+	for _, t := range a.allTabs() {
 		for _, p := range t.panes() {
 			if p.term != nil {
 				p.term.SetFont(termFont)
