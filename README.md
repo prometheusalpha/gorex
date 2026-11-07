@@ -34,7 +34,9 @@ terminal plugin (Ghostty's libghostty-vt). No webview, no cgo: one ~15 MB app.
 - **Command palette** (⇧⌘P, Ctrl+Shift+P, or the ⌘ button): every command, and every pane
   to jump to, fuzzy-matched.
 - Light and dark appearances (View ▸ Appearance), text size (⌘+ ⌘− ⌘0),
-  JetBrains Mono embedded.
+  JetBrains Mono embedded. `settings.json` takes a `fontFamily` the
+  terminals try first, and `fontFeatures` as Ghostty's font-feature
+  (`["-calt"]` turns JetBrains Mono's ligatures off), read at start.
 
 ## Shortcuts
 

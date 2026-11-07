@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/egoist/mygo"
 
@@ -16,6 +17,12 @@ type settings struct {
 	// Appearance is "light", "dark", or "" to follow the system.
 	Appearance string  `json:"appearance,omitempty"`
 	FontSize   float32 `json:"fontSize,omitempty"`
+	// FontFamily is a family, or a comma-separated list, that the
+	// terminals try before the embedded JetBrains Mono.
+	FontFamily string `json:"fontFamily,omitempty"`
+	// FontFeatures are OpenType features as Ghostty's font-feature takes
+	// them: "-calt" turns most coding fonts' ligatures off, "ss01" on.
+	FontFeatures []string `json:"fontFeatures,omitempty"`
 }
 
 const defaultFontSize = 11.6
@@ -32,6 +39,10 @@ func loadSettings() {
 		prefs.FontSize = defaultFontSize
 	}
 	termFont.Size = prefs.FontSize
+	if f := strings.TrimSpace(prefs.FontFamily); f != "" {
+		termFont.Family = f + ", " + termFont.Family
+	}
+	termFont.Features = prefs.FontFeatures
 	applyAppearance()
 }
 
