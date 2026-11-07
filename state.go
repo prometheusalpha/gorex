@@ -104,6 +104,9 @@ type App struct {
 	lastSnapshot string
 	title        string
 
+	// git holds what git said of the workspaces' directories.
+	git map[string]gitState
+
 	// posted are changes to make in the next frame, from terminals of a
 	// view without a window, as in tests.
 	postMu sync.Mutex

@@ -3,6 +3,7 @@ package main
 import (
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -211,10 +212,25 @@ func (a *App) workspaceItem(c *ui.Context, k *colors, i int, w *Workspace) {
 				}
 				ui.Text(c, w.label()).FontSize(13).FontWeight(600).TextColor(col).SingleLine().Ellipsis("…")
 			}
-			if w.Dir != "" {
-				ui.Text(c, shortDir(w.Dir)).FontSize(11.5).TextColor(k.textFaint).SingleLine().Ellipsis("…")
+			if g := a.gitOf(w.Dir); g.Branch != "" {
+				gitLine(c, k, g)
 			}
 		})
+	})
+}
+
+// gitLine shows a workspace's branch, and the commits it is ahead of its
+// upstream and behind it.
+func gitLine(c *ui.Context, k *colors, g gitState) {
+	ui.Row(c).Gap(4).MinWidth(0).AlignItems(ui.Center).Children(func() {
+		ui.Icon(c, icon("git-branch")).Size(11, 11).TextColor(k.textFaint).Shrink(0)
+		ui.Text(c, g.Branch).FontSize(11.5).TextColor(k.textFaint).SingleLine().Ellipsis("…").Shrink(1).MinWidth(0)
+		if g.Ahead > 0 {
+			ui.Text(c, strconv.Itoa(g.Ahead)+"↑").FontSize(11.5).FontWeight(600).TextColor(k.busy).SingleLine().Shrink(0)
+		}
+		if g.Behind > 0 {
+			ui.Text(c, strconv.Itoa(g.Behind)+"↓").FontSize(11.5).FontWeight(600).TextColor(k.attention).SingleLine().Shrink(0)
+		}
 	})
 }
 
