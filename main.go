@@ -11,7 +11,9 @@ import (
 	"encoding/json"
 	"log"
 	"os"
+	"os/signal"
 	"runtime"
+	"syscall"
 	"time"
 
 	"github.com/egoist/mygo"
@@ -25,6 +27,14 @@ func main() {
 	// -NSWindowResizeTime, which it reads itself.
 	if len(os.Args) > 1 && os.Args[1] == "-server" {
 		log.SetPrefix("[server] ")
+		// The signals that end the server end it as before, but in its
+		// log: sessions gone with the app went without a word.
+		sigs := make(chan os.Signal, 1)
+		signal.Notify(sigs, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
+		go func() {
+			log.Printf("rex: %v, exiting", <-sigs)
+			os.Exit(1)
+		}()
 		if err := rex.Serve(); err != nil {
 			log.Fatal(err)
 		}
