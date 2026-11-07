@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -28,6 +29,9 @@ type settings struct {
 	// the font's: 1.2 makes them 20% taller, as Ghostty's
 	// adjust-cell-height = 20%.
 	LineHeight float32 `json:"lineHeight,omitempty"`
+	// Theme names one of Ghostty's themes, as its theme setting does:
+	// "Ayu Mirage", or "light:Rose Pine Dawn,dark:Rose Pine".
+	Theme string `json:"theme,omitempty"`
 }
 
 const defaultFontSize = 11.6
@@ -50,6 +54,13 @@ func loadSettings() {
 	termFont.Features = prefs.FontFeatures
 	if prefs.LineHeight >= 0.8 && prefs.LineHeight <= 2 {
 		termFont.LineHeight = prefs.LineHeight
+	}
+	if prefs.Theme != "" {
+		if light, dark, err := loadThemes(prefs.Theme); err == nil {
+			applyTheme(light, dark)
+		} else {
+			log.Printf("settings: %v", err)
+		}
 	}
 	applyAppearance()
 }

@@ -103,7 +103,13 @@ var darkColors = colors{
 
 func colorsOf(c *ui.Context) *colors {
 	if c.Theme().Dark {
+		if themedDark != nil {
+			return themedDark
+		}
 		return &darkColors
+	}
+	if themedLight != nil {
+		return themedLight
 	}
 	return &lightColors
 }
