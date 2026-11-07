@@ -41,8 +41,13 @@ func TestReloadSettings(t *testing.T) {
 		t.Errorf("settings taken out: %+v", termFont)
 	}
 
-	write(`{"lineHeight": 1.2,}`)
+	broken := `{"lineHeight": 1.2,}`
+	write(broken)
 	if _, err := readSettings(); err == nil {
 		t.Error("a file that is not JSON read")
+	}
+	saveSettings()
+	if b, _ := os.ReadFile(filepath.Join(dir, "settings.json")); string(b) != broken {
+		t.Errorf("a file that is not JSON saved over: %s", b)
 	}
 }

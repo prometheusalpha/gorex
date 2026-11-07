@@ -133,7 +133,13 @@ func (a *App) eachTerm(fn func(*terminal.Terminal)) {
 	}
 }
 
+// saveSettings writes the settings, but not over a file that is not JSON:
+// the settings are the defaults then, and the file the user's, mid-edit.
 func saveSettings() {
+	if _, err := readSettings(); err != nil {
+		log.Printf("settings: not saved: %v", err)
+		return
+	}
 	b, _ := json.MarshalIndent(prefs, "", "  ")
 	os.MkdirAll(rex.Dir(), 0o700)
 	os.WriteFile(settingsPath(), b, 0o600)
