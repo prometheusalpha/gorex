@@ -26,7 +26,9 @@ func (a *App) view(c *ui.Context) {
 	ui.Column(c).Fill().Draw(func(p *ui.Painter, r ui.Rect) { paintBackground(p, r, k) }).Children(func() {
 		a.titleBar(c, k)
 		ui.Row(c).Grow(1).MinHeight(0).Padding(0, gap, gap, gap).Gap(gap).AlignItems(ui.Stretch).Children(func() {
-			a.sidebar(c, k)
+			if !prefs.HideSidebar {
+				a.sidebar(c, k)
+			}
 			ui.Column(c).Grow(1).MinWidth(0).MinHeight(0).Children(func() {
 				if t := a.tab(); t != nil {
 					a.tabContent(c, k, t)

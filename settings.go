@@ -23,6 +23,7 @@ type settings struct {
 	// FontFeatures are OpenType features as Ghostty's font-feature takes
 	// them: "-calt" turns most coding fonts' ligatures off, "ss01" on.
 	FontFeatures []string `json:"fontFeatures,omitempty"`
+	HideSidebar  bool     `json:"hideSidebar,omitempty"`
 }
 
 const defaultFontSize = 11.6
@@ -61,6 +62,11 @@ func applyAppearance() {
 	default:
 		mygo.Theme.SetSource(mygo.ThemeSystem)
 	}
+}
+
+func (a *App) toggleSidebar() {
+	prefs.HideSidebar = !prefs.HideSidebar
+	saveSettings()
 }
 
 func (a *App) setAppearance(v string) {

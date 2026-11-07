@@ -52,6 +52,7 @@ var (
 	cmdBigger      = command{Title: "Bigger Text", Accel: "CmdOrCtrl+=", Keys: "⌘+", Other: shortcut{ui.Ctrl, ui.KeyEqual}, Run: func(a *App) { a.setFontSize(termFont.Size + 1) }}
 	cmdSmaller     = command{Title: "Smaller Text", Accel: "CmdOrCtrl+-", Keys: "⌘−", Other: shortcut{ui.Ctrl, ui.KeyMinus}, Run: func(a *App) { a.setFontSize(termFont.Size - 1) }}
 	cmdActualSize  = command{Title: "Actual Size", Accel: "CmdOrCtrl+0", Keys: "⌘0", Other: shortcut{ui.Ctrl, ui.Key0}, Run: func(a *App) { a.setFontSize(defaultFontSize) }}
+	cmdSidebar     = command{Title: "Toggle Sidebar", Accel: "CmdOrCtrl+B", Keys: "⌘B", Other: ctrlShift(ui.KeyB), Run: func(a *App) { a.toggleSidebar() }}
 	cmdLight       = command{Title: "Appearance: Light", Run: func(a *App) { a.setAppearance("light") }}
 	cmdDark        = command{Title: "Appearance: Dark", Run: func(a *App) { a.setAppearance("dark") }}
 	cmdSystem      = command{Title: "Appearance: System", Run: func(a *App) { a.setAppearance("") }}
@@ -71,7 +72,7 @@ var paletteCommands = []*command{
 	&cmdNewWorkspace, &cmdRenameWorkspace, &cmdCloseWorkspace, &cmdNextWorkspace, &cmdPrevWorkspace,
 	&cmdFocusLeft, &cmdFocusRight, &cmdFocusUp, &cmdFocusDown,
 	&cmdGrowLeft, &cmdGrowRight, &cmdGrowUp, &cmdGrowDown,
-	&cmdBigger, &cmdSmaller, &cmdActualSize, &cmdLight, &cmdDark, &cmdSystem,
+	&cmdSidebar, &cmdBigger, &cmdSmaller, &cmdActualSize, &cmdLight, &cmdDark, &cmdSystem,
 	&cmdClearScroll, &cmdRestart, &cmdEndAll,
 }
 
@@ -200,6 +201,8 @@ func (a *App) menu() *mygo.Menu {
 		{Label: "View", Submenu: []*mygo.MenuItem{
 			item(&cmdPalette),
 			item(&cmdPalette2),
+			mygo.Separator(),
+			item(&cmdSidebar),
 			mygo.Separator(),
 			item(&cmdZoom),
 			item(&cmdEqualize),

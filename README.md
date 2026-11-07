@@ -55,6 +55,7 @@ terminal plugin (Ghostty's libghostty-vt). No webview, no cgo: one ~15 MB app.
 | ⌘1…⌘9, ⇧⌘[ ⇧⌘], ⌃Tab | Ctrl+Shift+1…9, Ctrl+PageUp/PageDown, Ctrl+Tab | Switch tabs |
 | ⇧⌘R | Ctrl+Shift+R | Rename tab |
 | ⌃⌘N | Ctrl+Shift+N | New workspace |
+| ⌘B | Ctrl+Shift+B | Show or hide the sidebar |
 | ⌃⌘1…⌃⌘9, ⌃⌘[ ⌃⌘] | | Switch workspaces |
 | ⇧⌘P, ⌘P | Ctrl+Shift+P | Command palette |
 | ⌘K | Ctrl+Shift+K | Clear |
