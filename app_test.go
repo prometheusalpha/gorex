@@ -412,3 +412,48 @@ func TestRestoreOldLayout(t *testing.T) {
 		t.Error("the pane's session was not attached again")
 	}
 }
+
+// TestAgents lists the agents of every workspace in the sidebar, and
+// goes to one's pane when it is clicked.
+func TestAgents(t *testing.T) {
+	registerFonts()
+	a := &App{}
+	pane := func(tab *Tab, id int, program string) *Pane {
+		p := &Pane{ID: id, Tab: tab, info: rex.SessionInfo{Shell: "zsh", Program: program, Idle: program == "zsh"}}
+		p.Node = &Node{Pane: p}
+		return p
+	}
+	shellTab := &Tab{ID: 1}
+	shellTab.Root = pane(shellTab, 2, "zsh").Node
+	shellTab.setFocus(shellTab.Root.Pane)
+	agentTab := &Tab{ID: 3}
+	shell, claude := pane(agentTab, 4, "zsh"), pane(agentTab, 5, "claude")
+	agentTab.Root = &Node{A: shell.Node, B: claude.Node, Ratio: 0.5}
+	agentTab.setFocus(shell)
+	first := &Workspace{ID: 6, Tabs: []*Tab{shellTab}}
+	second := &Workspace{ID: 7, Name: "api", Tabs: []*Tab{{ID: 8}, agentTab}}
+	second.Tabs[0].Root = pane(second.Tabs[0], 9, "zsh").Node
+	a.workspaces, a.cur = []*Workspace{first, second}, first
+
+	if ags := a.agents(); len(ags) != 1 || ags[0].pane != claude || ags[0].ws != second {
+		t.Fatalf("agents %+v", ags)
+	}
+	tt := ui.NewTester(func(c *ui.Context) { a.sidebar(c, colorsOf(c)) }, 1000, 620)
+	tt.Frame()
+	if texts := strings.Join(tt.Texts(), "|"); !strings.Contains(texts, "Claude Code") || !strings.Contains(texts, "Idle") {
+		t.Fatalf("the sidebar shows %q", texts)
+	}
+	if err := tt.Click("Claude Code"); err != nil {
+		t.Fatal(err)
+	}
+	if a.cur != second || a.tab() != agentTab || agentTab.Focus != claude || a.focusReq != claude {
+		t.Errorf("clicking the agent shows workspace %d, tab %v", a.cur.ID, a.tab())
+	}
+
+	// Without agents, the list says so.
+	claude.info = rex.SessionInfo{Shell: "zsh", Program: "zsh", Idle: true}
+	tt.Frame()
+	if !slices.Contains(tt.Texts(), "No agents running") {
+		t.Errorf("the sidebar shows %q", tt.Texts())
+	}
+}

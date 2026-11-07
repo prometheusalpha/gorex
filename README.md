@@ -12,9 +12,11 @@ terminal plugin (Ghostty's libghostty-vt). No webview, no cgo: one ~15 MB app.
   with its program's icon, name and directory in its header, and buttons to
   split right, split down, zoom and close. Drag the gaps between panes to
   resize them (double-click resets a split to half).
-- **Workspaces.** A sidebar lists sets of tabs, as one per project: each
-  opens its new panes in its directory, and counts the panes of its tabs
-  that print or ask for attention.
+- **Workspaces and agents.** A sidebar lists sets of tabs, as one per
+  project, each opening its new panes in its directory; and under them the
+  coding agents (Claude Code, Codex, Oh My Pi, opencode, Gemini) running in
+  any workspace, whether they work, idle or need attention. Clicking one
+  goes to its pane.
 - **Persistent sessions.** Shells run in a session server, a background
   process of the same binary (`GoRex -server`). Quit GoRex and everything
   keeps running; open it again and every tab, split and pane comes back as

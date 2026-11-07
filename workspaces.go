@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -164,23 +163,36 @@ func (a *App) startRenameWorkspace(w *Workspace) {
 	a.focusReq = nil // the field takes the focus
 }
 
-// sidebar lists the workspaces: their names, their directories, and what
-// their panes do.
+// sidebar lists the workspaces, and under them the agents of every
+// workspace.
 func (a *App) sidebar(c *ui.Context, k *colors) {
-	ui.Column(c).Width(sidebarW).Shrink(0).MinHeight(0).Gap(2).Role(ui.RoleList).Label("Workspaces").Children(func() {
-		ui.Row(c).Height(30).Padding(0, 2, 0, 10).AlignItems(ui.Center).Children(func() {
-			ui.Text(c, "Workspaces").FontSize(11.5).FontWeight(600).TextColor(k.textFaint).Grow(1)
-			if iconButton(c, k, "plus", "New Workspace", 24, 15).Tooltip(tip("New Workspace…", &cmdNewWorkspace)).Clicked() {
-				a.pickWorkspace()
-			}
-		})
-		ui.Scroll(c).Grow(1).MinHeight(0).Children(func() {
-			ui.Column(c).Gap(2).Children(func() {
+	ui.Scroll(c).Width(sidebarW).Shrink(0).MinHeight(0).Children(func() {
+		ui.Column(c).Gap(2).Children(func() {
+			sidebarHeading(c, k, "Workspaces", func() {
+				if iconButton(c, k, "plus", "New Workspace", 24, 15).Tooltip(tip("New Workspace", &cmdNewWorkspace)).Clicked() {
+					a.newWorkspace(a.currentDir())
+				}
+			})
+			ui.Column(c).Gap(2).Role(ui.RoleList).Label("Workspaces").Children(func() {
 				for i, w := range slices.Clone(a.workspaces) {
 					a.workspaceItem(c, k, i, w)
 				}
 			})
+			ui.Box(c).Height(10)
+			sidebarHeading(c, k, "Agents", nil)
+			a.agentList(c, k)
 		})
+	})
+}
+
+// sidebarHeading is the heading of a list of the sidebar, with buttons
+// on its right.
+func sidebarHeading(c *ui.Context, k *colors, title string, buttons func()) {
+	ui.Row(c).Height(30).Padding(0, 2, 0, 10).AlignItems(ui.Center).Children(func() {
+		ui.Text(c, title).FontSize(11.5).FontWeight(600).TextColor(k.textFaint).Grow(1)
+		if buttons != nil {
+			buttons()
+		}
 	})
 }
 
@@ -218,35 +230,7 @@ func (a *App) workspaceItem(c *ui.Context, k *colors, i int, w *Workspace) {
 				ui.Text(c, shortDir(w.Dir)).FontSize(11.5).TextColor(k.textFaint).SingleLine().Ellipsis("…")
 			}
 		})
-		a.workspaceBadge(c, k, w)
 	})
-}
-
-// workspaceBadge counts the panes of a workspace that print, and those
-// that ask for attention.
-func (a *App) workspaceBadge(c *ui.Context, k *colors, w *Workspace) {
-	running, attention := 0, 0
-	for _, t := range w.Tabs {
-		for _, p := range t.panes() {
-			switch a.statusOf(c, p) {
-			case statusRunning:
-				running++
-			case statusAttention:
-				attention++
-			}
-		}
-	}
-	count := func(n int, col ui.Color, what string) {
-		if n == 0 {
-			return
-		}
-		ui.Row(c).Gap(4).AlignItems(ui.Center).Shrink(0).Tooltip(fmt.Sprintf("%d %s", n, what)).Children(func() {
-			ui.Box(c).Size(7, 7).Radius(4).Background(col)
-			ui.Text(c, fmt.Sprint(n)).FontSize(11.5).FontWeight(600).TextColor(k.textMuted)
-		})
-	}
-	count(attention, k.attention, "need attention")
-	count(running, k.busy, "printing")
 }
 
 // renameWorkspaceField edits the name of a workspace in place, as

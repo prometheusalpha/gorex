@@ -46,14 +46,19 @@ type program struct {
 	TileBorder bool
 	// Shell is a shell at its prompt.
 	Shell bool
+	// Agent is a coding agent, which the sidebar lists.
+	Agent bool
 }
 
 var (
 	shellTile = program{Glyph: "square-terminal", TileGlyph: "terminal", TileBg: ui.Hex("#1d2420"), TileFg: ui.Hex("#5fd38d"), Shell: true}
 
 	programs = map[string]program{
-		"codex":     {Name: "Codex", Glyph: "brand:openai", TileBg: ui.Hex("#f7f7f7"), TileFg: ui.Hex("#1a1a1a"), TileBorder: true},
-		"claude":    {Name: "Claude Code", Glyph: "brand:claude", TileBg: ui.Hex("#d97757"), TileFg: ui.Hex("#ffffff")},
+		"codex":     {Name: "Codex", Glyph: "brand:openai", TileBg: ui.Hex("#f7f7f7"), TileFg: ui.Hex("#1a1a1a"), TileBorder: true, Agent: true},
+		"claude":    {Name: "Claude Code", Glyph: "brand:claude", TileBg: ui.Hex("#d97757"), TileFg: ui.Hex("#ffffff"), Agent: true},
+		"omp":       {Name: "Oh My Pi", Glyph: "bot", TileBg: ui.Hex("#2a2140"), TileFg: ui.Hex("#c9b6ff"), Agent: true},
+		"opencode":  {Name: "opencode", Glyph: "bot", TileBg: ui.Hex("#1a1a1a"), TileFg: ui.Hex("#f5f5f5"), Agent: true},
+		"gemini":    {Name: "Gemini", Glyph: "sparkles", TileBg: ui.Hex("#1f3b73"), TileFg: ui.Hex("#a8c7fa"), Agent: true},
 		"node":      {Name: "Node", Glyph: "node-hex", TileBg: ui.Hex("#5fa04e"), TileFg: ui.Hex("#ffffff"), TileGlyph: "brand:nodedotjs"},
 		"bun":       {Name: "Bun", Glyph: "brand:bun", TileBg: ui.Hex("#fbf0df"), TileFg: ui.Hex("#3b2a20"), TileBorder: true},
 		"deno":      {Name: "Deno", Glyph: "brand:deno", TileBg: ui.Hex("#1b1b1b"), TileFg: ui.Hex("#ffffff")},

@@ -383,7 +383,7 @@ func (a *App) paletteItems() []paletteItem {
 	var items []paletteItem
 	q := strings.ToLower(strings.TrimSpace(a.paletteQuery))
 	match := func(s string) bool { return q == "" || fuzzy(strings.ToLower(s), q) }
-	for wi, w := range a.workspaces {
+	for _, w := range a.workspaces {
 		for ti, t := range w.Tabs {
 			for _, p := range t.panes() {
 				name, detail := p.label()
@@ -396,12 +396,7 @@ func (a *App) paletteItems() []paletteItem {
 				}
 				items = append(items, paletteItem{
 					title: name, detail: detail, glyph: paneProgram(p).Glyph, keys: keys,
-					run: func() {
-						a.selectWorkspace(wi)
-						a.selectTab(ti)
-						t.setFocus(p)
-						a.focusReq = p
-					},
+					run: func() { a.goTo(p) },
 				})
 			}
 		}
