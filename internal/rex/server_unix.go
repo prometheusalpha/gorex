@@ -20,7 +20,7 @@ import (
 func lockFile(f *os.File) error { return unix.Flock(int(f.Fd()), unix.LOCK_EX|unix.LOCK_NB) }
 
 // detached starts the server in a session of its own, which outlives the
-// app's, but on macOS not the app (spawnOpen).
+// app's.
 func detached() *syscall.SysProcAttr { return &syscall.SysProcAttr{Setsid: true} }
 
 // hostInfo describes this machine; it may take a second.

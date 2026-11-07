@@ -327,12 +327,6 @@ func Spawn() error {
 		return err
 	}
 	defer logf.Close()
-	if err := spawnOpen(exe, logf.Name()); err == nil {
-		return nil
-	} else if !errors.Is(err, errors.ErrUnsupported) {
-		// A server that ends with the app is better than none.
-		fmt.Fprintf(logf, "rex: %v; starting the server as the app's\n", err)
-	}
 	devnull, err := os.Open(os.DevNull)
 	if err != nil {
 		return err
