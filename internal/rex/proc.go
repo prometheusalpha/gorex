@@ -32,6 +32,17 @@ func (p procInfo) programName() string {
 			name = base
 		}
 	}
+	// Claude Code runs as …/claude/versions/2.1.319, whose name is its
+	// version: the command it was typed as, or the directory of its
+	// versions, names it.
+	if isVersion(name) && len(p.args) > 0 {
+		if base := filepath.Base(p.args[0]); !isVersion(base) {
+			return base
+		}
+		if dir := filepath.Dir(p.args[0]); filepath.Base(dir) == "versions" {
+			return filepath.Base(filepath.Dir(dir))
+		}
+	}
 	if interpreters[name] && len(p.args) > 1 {
 		for _, a := range p.args[1:] {
 			if strings.HasPrefix(a, "-") {
@@ -51,4 +62,9 @@ func (p procInfo) programName() string {
 		}
 	}
 	return name
+}
+
+// isVersion reports whether a name is a version, as 2.1.319.
+func isVersion(s string) bool {
+	return s != "" && strings.Trim(s, "0123456789.") == "" && strings.Contains(s, ".")
 }
