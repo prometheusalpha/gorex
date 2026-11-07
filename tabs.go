@@ -123,7 +123,7 @@ func (a *App) tabItem(c *ui.Context, k *colors, i int, t *Tab, width float32) {
 			if x.Clicked() {
 				a.later(c, func() { a.closeTab(t) })
 			}
-		} else if t.attention() {
+		} else if a.tabAttention(c, t) {
 			ui.Box(c).Size(7, 7).Radius(4).Background(k.attention).Margin(0, 5, 0, 0)
 		} else if a.tabBusy(c, t) {
 			activityDot(c, k.busy, 5.5)
@@ -156,9 +156,9 @@ func (a *App) renameField(c *ui.Context, t *Tab, name string) {
 	}
 }
 
-func (t *Tab) attention() bool {
+func (a *App) tabAttention(c *ui.Context, t *Tab) bool {
 	for _, p := range t.panes() {
-		if p.attention {
+		if a.statusOf(c, p) == statusAttention {
 			return true
 		}
 	}

@@ -477,3 +477,26 @@ func TestAgents(t *testing.T) {
 		t.Errorf("the sidebar shows %q", tt.Texts())
 	}
 }
+
+// TestAgentStatus believes what an agent says it does over its output,
+// as it redraws its screen while it waits.
+func TestAgentStatus(t *testing.T) {
+	a := &App{}
+	p := &Pane{info: rex.SessionInfo{Shell: "zsh", Program: "claude", Agent: &rex.AgentStatus{State: "idle"}}}
+	p.lastData.Store(time.Now().UnixNano())
+	var got status
+	tt := ui.NewTester(func(c *ui.Context) { got = a.statusOf(c, p) }, 100, 100)
+	for state, want := range map[string]status{"idle": statusQuiet, "done": statusQuiet, "working": statusRunning, "blocked": statusAttention} {
+		p.info.Agent.State = state
+		tt.Frame()
+		if got != want {
+			t.Errorf("%s: status %d, not %d", state, got, want)
+		}
+	}
+	// Without a state, its output tells.
+	p.info.Agent = nil
+	tt.Frame()
+	if got != statusRunning {
+		t.Errorf("printing: status %d", got)
+	}
+}

@@ -338,6 +338,17 @@ func (a *App) statusOf(c *ui.Context, p *Pane) status {
 	if p.info.Idle || p.info.Program == "" || programOf(p.info.Program).Shell {
 		return statusIdle
 	}
+	// An agent that says what it does is believed over its output, as it
+	// redraws its screen while it waits.
+	if st := p.info.Agent; st != nil {
+		switch st.State {
+		case "working":
+			return statusRunning
+		case "blocked", "error":
+			return statusAttention
+		}
+		return statusQuiet
+	}
 	last := time.Unix(0, p.lastData.Load())
 	if since := c.Now().Sub(last); since < activeFor {
 		c.After(activeFor - since)
@@ -351,7 +362,10 @@ func (a *App) statusOf(c *ui.Context, p *Pane) status {
 func (a *App) activityBadge(c *ui.Context, k *colors, p *Pane) {
 	switch a.statusOf(c, p) {
 	case statusRunning:
-		activityDot(c, k.busy, 6)
+		dot := activityDot(c, k.busy, 6)
+		if p.info.Agent != nil {
+			dot.Tooltip("Working")
+		}
 	case statusAttention:
 		ui.Box(c).Size(7, 7).Radius(4).Background(k.attention).Margin(0, 0, 0, 2).Tooltip("Needs attention")
 	}
