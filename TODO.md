@@ -8,3 +8,4 @@
 - Việc hay phải xin quyền đọc lần nữa
 - Theme
 - Nút toggle show hide sidebar
+- Màn settings
