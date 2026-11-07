@@ -155,6 +155,14 @@ func sessionEnv(id string, extra []string) []string {
 			strings.HasPrefix(k, "VSCODE_"), strings.HasPrefix(k, "WEZTERM_"), strings.HasPrefix(k, "ALACRITTY_"),
 			strings.HasPrefix(k, "GOREX_"), strings.HasPrefix(k, "MYGO_"):
 			continue
+		// A server started from Claude Code, as by mygo dev, has what it
+		// sets for its own children: an agent in a session would take
+		// itself for one of them, which keeps no transcript and sends no
+		// OSC 7501. Its settings, as CLAUDE_CODE_USE_BEDROCK, stay.
+		case k == "CLAUDECODE", k == "CLAUDE_PID", k == "CLAUDE_CODE_CHILD_SESSION", k == "CLAUDE_CODE_ENTRYPOINT",
+			k == "CLAUDE_CODE_EXECPATH", k == "CLAUDE_CODE_SSE_PORT",
+			strings.HasPrefix(k, "CLAUDE_CODE_SESSION_"), strings.HasPrefix(k, "CLAUDE_CODE_MESSAGING_"):
+			continue
 		case k == "LANG" || k == "LC_ALL" || k == "LC_CTYPE":
 			hasLang = true
 		}
