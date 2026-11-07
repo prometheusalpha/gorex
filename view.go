@@ -70,6 +70,13 @@ func (a *App) titleBar(c *ui.Context, k *colors) {
 		left += 14
 	}
 	ui.Row(c).Height(titleH).Padding(0, max(bar.Right, 10), 0, left).Gap(14).AlignItems(ui.Center).DragWindow().Children(func() {
+		label := "Hide Sidebar"
+		if prefs.HideSidebar {
+			label = "Show Sidebar"
+		}
+		if iconButton(c, k, "panel-left", label, 30, 17).Tooltip(tip(label, &cmdSidebar)).Clicked() {
+			a.toggleSidebar()
+		}
 		a.hostChip(c, k)
 		a.tabStrip(c, k)
 		// The title bar between the tabs and the buttons, which drags the

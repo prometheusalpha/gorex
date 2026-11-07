@@ -352,6 +352,22 @@ func TestWorkspaces(t *testing.T) {
 	if texts := strings.Join(tt.Texts(), "|"); !strings.Contains(texts, "Default") || !strings.Contains(texts, w.label()) {
 		t.Errorf("the sidebar shows %q", texts)
 	}
+	// The title bar's button hides the sidebar, and shows it again.
+	if err := tt.Click("Hide Sidebar"); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	if slices.Contains(tt.Texts(), "Workspaces") {
+		t.Error("the sidebar shows after Hide Sidebar")
+	}
+	if err := tt.Click("Show Sidebar"); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	if prefs.HideSidebar || !slices.Contains(tt.Texts(), "Workspaces") {
+		t.Error("the sidebar is hidden after Show Sidebar")
+	}
+
 	p := a.tab().Focus
 	waitFor(t, tt, "the shell", func() bool { return p.term != nil && strings.Contains(p.term.Text(), testShell.prompt) })
 
