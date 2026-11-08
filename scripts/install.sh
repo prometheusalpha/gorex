@@ -17,10 +17,7 @@ if [[ "${1:-}" == "--no-install" ]]; then
 	exit 0
 fi
 
-# pgrep misses GoRex while it runs, so look through ps.
-if ps -axo command | grep -q "[/]Applications/GoRex.app"; then
-	echo "GoRex is running: quit it (⌘Q) and run this again to install." >&2
-	exit 1
-fi
+# ditto writes new files, so a running GoRex keeps the binary it started
+# with; the new one runs from the next launch.
 ditto "$app" /Applications/GoRex.app
 echo "Installed /Applications/GoRex.app"
