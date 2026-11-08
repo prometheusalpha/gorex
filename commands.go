@@ -61,7 +61,7 @@ var (
 
 	cmdNewWorkspace    = command{Title: "New Workspace", Accel: "CmdOrCtrl+Ctrl+N", Keys: "⌃⌘N", Other: ctrlShift(ui.KeyN), Run: func(a *App) { a.newWorkspace(a.currentDir()) }}
 	cmdRenameWorkspace = command{Title: "Rename Workspace…", Run: func(a *App) { a.startRenameWorkspace(a.ws()) }}
-	cmdCloseWorkspace  = command{Title: "Close Workspace", Run: func(a *App) { a.closeWorkspace(a.ws()) }}
+	cmdCloseWorkspace  = command{Title: "Close Workspace", Run: func(a *App) { a.askCloseWorkspace(a.ws()) }}
 	cmdNextWorkspace   = command{Title: "Next Workspace", Accel: "CmdOrCtrl+Ctrl+]", Keys: "⌃⌘]", Run: func(a *App) { a.cycleWorkspace(1) }}
 	cmdPrevWorkspace   = command{Title: "Previous Workspace", Accel: "CmdOrCtrl+Ctrl+[", Keys: "⌃⌘[", Run: func(a *App) { a.cycleWorkspace(-1) }}
 )
@@ -256,13 +256,14 @@ func (a *App) run(cmd *command) {
 
 func (a *App) closeFocused() {
 	if t := a.tab(); t != nil && t.Focus != nil {
-		a.closePane(t.Focus)
+		p := t.Focus
+		a.askClose("this pane", []*Pane{p}, func() { a.closePane(p) })
 	}
 }
 
 func (a *App) closeActiveTab() {
 	if t := a.tab(); t != nil {
-		a.closeTab(t)
+		a.askClose("this tab", t.panes(), func() { a.closeTab(t) })
 	}
 }
 

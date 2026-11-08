@@ -322,7 +322,7 @@ func (a *App) paneHeader(c *ui.Context, k *colors, t *Tab, p *Pane, focused, hov
 				a.toggleZoom()
 			}
 			if iconButton(c, k, "x", "Close Pane", 26, 17).Tooltip(tip("Close Pane", &cmdClosePane)).Clicked() {
-				a.later(c, func() { a.closePane(p) })
+				a.later(c, func() { a.askClose("this pane", []*Pane{p}, func() { a.closePane(p) }) })
 			}
 		})
 	})

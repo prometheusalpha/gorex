@@ -160,6 +160,14 @@ func (n *Node) panes() []*Pane {
 
 func (t *Tab) panes() []*Pane { return t.Root.panes() }
 
+func (w *Workspace) panes() []*Pane {
+	var ps []*Pane
+	for _, t := range w.Tabs {
+		ps = append(ps, t.panes()...)
+	}
+	return ps
+}
+
 // setFocus gives a pane the focus of its tab.
 func (t *Tab) setFocus(p *Pane) {
 	if p == nil {
@@ -421,6 +429,42 @@ func (a *App) closeTab(t *Tab) {
 		}
 	}
 	a.removeTab(t)
+}
+
+// askClose runs fn, after asking when a program other than a shell runs
+// in one of the panes: closing ends it. The dialog waits off the main
+// thread, as waiting on it would run frames inside the one asking.
+func (a *App) askClose(what string, panes []*Pane, fn func()) {
+	var names []string
+	for _, p := range panes {
+		if p.closed || p.info.Idle || p.info.Program == "" || programOf(p.info.Program).Shell {
+			continue
+		}
+		if n := programOf(p.info.Program).Name; !slices.Contains(names, n) {
+			names = append(names, n)
+		}
+	}
+	if len(names) == 0 || a.win == nil {
+		fn()
+		return
+	}
+	running := names[0] + " is still running. Closing ends it."
+	if k := len(names); k > 1 {
+		running = strings.Join(names[:k-1], ", ") + " and " + names[k-1] + " are still running. Closing ends them."
+	}
+	win := a.win
+	go func() {
+		r, err := mygo.Dialog.Message(mygo.MessageOptions{
+			Parent:  win,
+			Type:    mygo.MessageWarning,
+			Message: "Close " + what + "?",
+			Detail:  running,
+			Buttons: []string{"Close", "Cancel"},
+		})
+		if err == nil && r.Button == 0 {
+			a.do(fn)
+		}
+	}()
 }
 
 func (a *App) selectTab(i int) {

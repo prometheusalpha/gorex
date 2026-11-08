@@ -148,6 +148,13 @@ func (a *App) closeWorkspace(w *Workspace) {
 	}
 }
 
+func (a *App) askCloseWorkspace(w *Workspace) {
+	if len(a.workspaces) < 2 {
+		return
+	}
+	a.askClose("this workspace", w.panes(), func() { a.closeWorkspace(w) })
+}
+
 func (a *App) startRenameWorkspace(w *Workspace) {
 	a.renaming = nil
 	a.renamingWS, a.renameText, a.renameFocus = w, w.Name, false
@@ -279,6 +286,6 @@ func (a *App) workspaceMenu(m *ui.Menu, w *Workspace) {
 		a.newWorkspace(w.dir())
 	}
 	if m.Item("Close Workspace").Disabled(len(a.workspaces) < 2).Chosen() {
-		a.laterService(func() { a.closeWorkspace(w) })
+		a.laterService(func() { a.askCloseWorkspace(w) })
 	}
 }

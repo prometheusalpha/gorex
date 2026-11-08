@@ -121,7 +121,7 @@ func (a *App) tabItem(c *ui.Context, k *colors, i int, t *Tab, width float32) {
 		if hovered && len(a.allTabs()) > 1 {
 			x := iconButton(c, k, "x", "Close Tab", 18, 12).Tooltip("Close Tab")
 			if x.Clicked() {
-				a.later(c, func() { a.closeTab(t) })
+				a.later(c, func() { a.askClose("this tab", t.panes(), func() { a.closeTab(t) }) })
 			}
 		} else if a.tabAttention(c, t) {
 			ui.Box(c).Size(7, 7).Radius(4).Background(k.attention).Margin(0, 5, 0, 0)
@@ -213,15 +213,20 @@ func (a *App) tabMenu(m *ui.Menu, t *Tab) {
 		a.newTab(a.currentDir())
 	}
 	if m.Item("Close Tab").Chosen() {
-		a.laterService(func() { a.closeTab(t) })
+		a.laterService(func() { a.askClose("this tab", t.panes(), func() { a.closeTab(t) }) })
 	}
 	if m.Item("Close Other Tabs").Disabled(len(a.ws().Tabs) < 2).Chosen() {
 		a.laterService(func() {
-			for _, o := range slices.Clone(a.ws().Tabs) {
-				if o != t {
+			others := slices.DeleteFunc(slices.Clone(a.ws().Tabs), func(o *Tab) bool { return o == t })
+			var panes []*Pane
+			for _, o := range others {
+				panes = append(panes, o.panes()...)
+			}
+			a.askClose("the other tabs", panes, func() {
+				for _, o := range others {
 					a.closeTab(o)
 				}
-			}
+			})
 		})
 	}
 }
