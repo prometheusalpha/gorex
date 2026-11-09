@@ -4,7 +4,10 @@ A replica of [Superlogical's Rex](https://www.superlogical.com/updates/public-te
 terminal, written in Go with [MyGo](https://mygo.egoist.dev)'s native UI and its
 terminal plugin (Ghostty's libghostty-vt). No webview, no cgo: one ~15 MB app.
 
-![GoRex](docs/screenshot.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshot-dark.png">
+  <img alt="GoRex" src="docs/screenshot.png">
+</picture>
 
 ## What it does
 
