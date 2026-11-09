@@ -12,4 +12,7 @@ func Serve() error { return errUnsupported }
 // Spawn starts a server; not on this platform.
 func Spawn() error { return errUnsupported }
 
+// EndJob does nothing on this platform.
+func EndJob() {}
+
 func processAlive(int) bool { return false }

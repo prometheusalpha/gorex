@@ -33,9 +33,12 @@ func main() {
 		signal.Notify(sigs, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
 		go func() {
 			log.Printf("rex: %v, exiting", <-sigs)
+			rex.EndJob()
 			os.Exit(1)
 		}()
-		if err := rex.Serve(); err != nil {
+		err := rex.Serve()
+		rex.EndJob()
+		if err != nil {
 			log.Fatal(err)
 		}
 		return

@@ -322,7 +322,13 @@ func Spawn() error {
 	if err := os.MkdirAll(Dir(), 0o700); err != nil {
 		return err
 	}
-	logf, err := os.OpenFile(filepath.Join(Dir(), "server.log"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
+	return spawn(exe, filepath.Join(Dir(), "server.log"))
+}
+
+// spawnProcess starts the server as a child of this process, in a session
+// of its own.
+func spawnProcess(exe, logPath string) error {
+	logf, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
 	if err != nil {
 		return err
 	}
