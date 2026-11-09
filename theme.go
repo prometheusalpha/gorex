@@ -133,9 +133,9 @@ func colorsAround(t *terminal.Theme) *colors {
 	}
 	k.cardFocused = t.Background.Alpha(0.96)
 	k.card = t.Background.Alpha(0.78)
-	// The window's gradient, as GoRex's own, of the theme's colors: its
-	// background a shade darker than the cards', toward its magenta at
-	// the top and its yellow at the bottom.
+	// The window's gradient, shaped as GoRex's own but of the theme's
+	// colors: its background a shade darker than the cards', toward its
+	// magenta at the top and its yellow at the bottom.
 	black := ui.RGB(0, 0, 0)
 	k.bgMid = mix(t.Background, black, shade)
 	k.bgLow = mix(t.Background, black, shade*1.2)

@@ -28,11 +28,11 @@ type colors struct {
 }
 
 var lightColors = colors{
-	bgTop:    ui.Hex("#f6e7f6"),
-	bgMid:    ui.Hex("#efe1e6"),
-	bgLow:    ui.Hex("#eee0d3"),
-	bgBottom: ui.Hex("#ece1bd"),
-	bgTint:   ui.RGBA(242, 214, 222, 0.35),
+	bgTop:    ui.Hex("#e7ebf8"),
+	bgMid:    ui.Hex("#e3e7ef"),
+	bgLow:    ui.Hex("#e0e6ea"),
+	bgBottom: ui.Hex("#d9e6e6"),
+	bgTint:   ui.RGBA(214, 224, 242, 0.35),
 
 	card:              ui.RGBA(255, 255, 255, 0.66),
 	cardFocused:       ui.RGBA(255, 255, 255, 0.95),
@@ -65,11 +65,11 @@ var lightColors = colors{
 }
 
 var darkColors = colors{
-	bgTop:    ui.Hex("#2c2131"),
-	bgMid:    ui.Hex("#231e27"),
-	bgLow:    ui.Hex("#221f22"),
-	bgBottom: ui.Hex("#2a2619"),
-	bgTint:   ui.RGBA(80, 40, 60, 0.25),
+	bgTop:    ui.Hex("#21283a"),
+	bgMid:    ui.Hex("#1e2229"),
+	bgLow:    ui.Hex("#1e2124"),
+	bgBottom: ui.Hex("#1a2627"),
+	bgTint:   ui.RGBA(40, 55, 90, 0.25),
 
 	card:              ui.RGBA(20, 20, 24, 0.5),
 	cardFocused:       ui.RGBA(36, 36, 41, 0.94),
